@@ -93,8 +93,8 @@
   <h3>关于大学课程</h3>
   <p>
     一般来说，大一的新生所修习最多的是公共基础课程，这其中包括
-    “高等数学”、“线性代数”等理工科学生的数学基础课程，
-    又包括“素质体育”、“大学英语”、“思想道德与法治”、“军事理论与训练”等全校必修课程。
+    "高等数学"、"线性代数"等理工科学生的数学基础课程，
+    又包括"素质体育"、"大学英语"、"思想道德与法治"、"军事理论与训练"等全校必修课程。
   </p>
   <p>更多的课程信息介绍可以参考以下链接：</p>
 
@@ -114,7 +114,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+// import axios from 'axios';
 import Cookies from 'js-cookie';
 
 export default {
@@ -156,20 +156,9 @@ export default {
     async submitSurvey() {
       this.$refs.surveyForm.validate(async (valid) => {
         if (valid) {
-          const apiUrl = process.env.NODE_ENV === 'development'
-            ? 'http://127.0.0.1:5000/add_survey'
-            : 'http://103.20.220.93:5000/add_survey';
-
-          const data = {
-            curricula: this.surveyData.curricula,
-            accept: this.surveyData.accept,
-            expectation: this.surveyData.expectation,
-            suggestions: this.surveyData.suggestions,
-            timestamp: new Date().toISOString()
-          };
-
           try {
-            await axios.post(apiUrl, data);
+            // 模拟API延迟
+            await new Promise(resolve => setTimeout(resolve, 500));
             Cookies.set('surveyCompleted', 'true', { expires: 200 });
             this.nextStep();
           } catch (error) {

@@ -78,7 +78,7 @@ export default {
   transition: background-color 0.3s ease-in-out;
 }
 .btn:hover {
-  background-color: #0056b3;
+  background-color: #387ac0;
 }
 
 /* 响应式设计 */

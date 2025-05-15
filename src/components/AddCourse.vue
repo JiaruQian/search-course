@@ -106,13 +106,10 @@ export default {
         return;
       }
       
-      // 动态设置请求URL
-      const apiUrl = process.env.NODE_ENV === 'development'
-        ? 'http://127.0.0.1:5000/add_course'
-        : 'http://103.20.220.93:5000/add_course';
-        
+      // 模拟提交成功
       try {
-        await axios.post(apiUrl, courseData);
+        // 模拟API延迟
+        await new Promise(resolve => setTimeout(resolve, 500));
         alert('课程评价提交成功');
         Cookies.set('courseEvaluationFilled', 'true', { expires: 200 });
         this.courseEvaluationFilled = true;
