@@ -111,6 +111,7 @@
 
 <script>
 import { Reading, User, UploadFilled } from '@element-plus/icons-vue';
+import axios from 'axios';
 
 export default {
   name: 'CoursePromotion',
@@ -159,11 +160,8 @@ export default {
       };
 
       try {
-        // 模拟API延迟
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 模拟数据发送至API (记录数据用于调试)
-        console.log('将发送到API的课程推广数据:', courseData);
+        // 调用API提交课程推广信息
+        await axios.post('/course_promotion', courseData);
         
         this.$notify({
           title: '成功',

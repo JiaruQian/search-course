@@ -114,7 +114,7 @@
 </template>
 
 <script>
-// import axios from 'axios';
+import axios from 'axios';
 import Cookies from 'js-cookie';
 
 export default {
@@ -157,8 +157,8 @@ export default {
       this.$refs.surveyForm.validate(async (valid) => {
         if (valid) {
           try {
-            // 模拟API延迟
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // 提交数据到后端API
+            await axios.post('/submit_survey', this.surveyData);
             Cookies.set('surveyCompleted', 'true', { expires: 200 });
             this.nextStep();
           } catch (error) {

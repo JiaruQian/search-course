@@ -70,9 +70,11 @@
 <script>
 import axios from 'axios';
 import Cookies from 'js-cookie';
-axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*'
-axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
+// 移除CORS头设置，应该由后端处理
+// axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*'
+// axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+// axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
+
 export default {
   data() {
     return {
@@ -101,22 +103,36 @@ export default {
       };
 
       // 检查课程成绩是否在0-100范围内或为'Unknown'
-      if (courseData.grade !== 'Unknown' && (!Number.isInteger(courseData.grade) || courseData.grade < 0 || courseData.grade > 100)) {
+      if (courseData.grade !== 'Unknown' && (!Number.isInteger(Number(courseData.grade)) || courseData.grade < 0 || courseData.grade > 100)) {
         alert('课程成绩必须是0-100范围内的整数或者为空');
         return;
       }
       
-      // 模拟提交成功
       try {
-        // 模拟API延迟
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('正在提交课程评价...');
+        console.log('提交数据:', courseData);
+        // 提交数据到后端API
+        const response = await axios.post('/add_course', courseData);
+        console.log('添加课程响应:', response);
+        
         alert('课程评价提交成功');
         Cookies.set('courseEvaluationFilled', 'true', { expires: 200 });
         this.courseEvaluationFilled = true;
         this.$emit('courseAdded');
       } catch (error) {
-        console.error('Error adding course:', error);
-        alert('课程评价提交失败');
+        console.error('添加课程失败:', error);
+        if (error.response) {
+          // 服务器响应了，但状态码不在 2xx 范围
+          console.error('错误状态码:', error.response.status);
+          console.error('错误数据:', error.response.data);
+        } else if (error.request) {
+          // 请求已发送但没有收到响应
+          console.error('请求已发送但没有收到响应');
+        } else {
+          // 设置请求时发生了一些事情，触发了错误
+          console.error('错误信息:', error.message);
+        }
+        alert('课程评价提交失败: ' + (error.response?.data?.message || error.message || '未知错误'));
       }
     }
   }

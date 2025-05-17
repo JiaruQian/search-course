@@ -117,6 +117,7 @@
 
 <script>
 import { Reading, ArrowRight, Back } from '@element-plus/icons-vue'
+import axios from 'axios'
 
 export default {
   name: 'AIRAG',
@@ -167,24 +168,28 @@ export default {
         await this.$refs.formRef.validate();
         this.loading = true;
 
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 模拟返回数据
-        this.recommendations = [
-          {
-            course: '高等数学',
-            reason: '根据您的需求，这门课程的教学方式灵活，给分较为宽松，适合您的学习风格。'
-          },
-          {
-            course: '线性代数',
-            reason: '课程内容循序渐进，考核方式合理，符合您的期望。'
-          },
-          {
-            course: '中国传统文化',
-            reason: '课程生动有趣，考核方式灵活，适合您的学习需求。'
-          }
-        ];
+        try {
+          // 调用后端AI推荐API
+          const response = await axios.post('/ai_recommendation', this.formData);
+          this.recommendations = response.data;
+        } catch (error) {
+          console.error('获取AI推荐失败:', error);
+          // 如果API调用失败，使用备用数据
+          this.recommendations = [
+            {
+              course: '高等数学',
+              reason: '根据您的需求，这门课程的教学方式灵活，给分较为宽松，适合您的学习风格。'
+            },
+            {
+              course: '线性代数',
+              reason: '课程内容循序渐进，考核方式合理，符合您的期望。'
+            },
+            {
+              course: '中国传统文化',
+              reason: '课程生动有趣，考核方式灵活，适合您的学习需求。'
+            }
+          ];
+        }
 
         // 进入下一步
         this.activeStep = 1;

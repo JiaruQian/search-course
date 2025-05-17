@@ -123,24 +123,25 @@
 
 <script>
 import { defineAsyncComponent } from 'vue';
-// import axios from 'axios';
+import axios from 'axios';
 import Cookies from 'js-cookie';
-// import AddCourse from './components/AddCourse.vue';
 import SearchForm from './components/SearchForm.vue';
-// import SearchResults from './components/SearchResults.vue';
-// import FreshmenZone from './components/FreshmenZone.vue';
-// import { ElMessage } from 'element-plus';
-// axios.defaults.baseURL = '/api';
+import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion } from '@element-plus/icons-vue';
+
+// 设置API URL
+const apiBaseUrl = 'http://localhost:8082'; // 如果后续需要从env文件读取，可以改为 import.meta.env.VITE_API_BASE_URL
+const apiUrl = `${apiBaseUrl}/search`;
+const statisticUrl = `${apiBaseUrl}/statistic`;
+
+// 设置axios默认配置
+axios.defaults.baseURL = apiBaseUrl;
+// 不需要在客户端设置这些CORS头，由服务器端处理
 // axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
 // axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
 // axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization';
-import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion } from '@element-plus/icons-vue';
-// const apiUrl = process.env.NODE_ENV === 'development'
-//   ? 'http://127.0.0.1:5000/search'
-//   : 'http://103.20.220.93:5000/search';
-// const Statistic = process.env.NODE_ENV === 'development'
-//   ? 'http://127.0.0.1:5000/statistic'
-//   : 'http://103.20.220.93:5000/statistic';
+// 设置默认的content-type
+axios.defaults.headers.post['Content-Type'] = 'application/json';
+
 const AddCourse = defineAsyncComponent(() =>
   import('./components/AddCourse.vue')
 );
@@ -156,12 +157,7 @@ const AIRAG = defineAsyncComponent(() =>
 const CoursePromotion = defineAsyncComponent(() =>
   import('./components/CoursePromotion.vue')
 );
-// const apiUrl = process.env.NODE_ENV === 'development'
-//   ? 'http://127.0.0.1:5000/search'
-//   : 'http://103.20.220.93:5000/search';
-// const Statistic = process.env.NODE_ENV === 'development'
-//   ? 'http://127.0.0.1:5000/statistic'
-//   : 'http://103.20.220.93:5000/statistic';
+
 export default {
   components: {
     AddCourse,
@@ -234,9 +230,8 @@ export default {
       this.currentPage = 'search';
     }
     
-    // 使用模拟数据
-    this.visitCount = 156;
-    this.evaluationCount = 89;
+    // 从后端API获取统计数据
+    this.fetchStatistics();
   },
   mounted() {
     this.$nextTick(() => {
@@ -256,27 +251,46 @@ export default {
       this.currentPage = 'search';
     },
     async handleSearch(searchParams) {
-      // 模拟搜索功能
-      const { course_name, instructor } = searchParams;
-      this.results = this.mockResults.filter(course => {
-        const nameMatch = !course_name || course['课程名称'].includes(course_name);
-        const instructorMatch = !instructor || course['授课老师'].includes(instructor);
-        return nameMatch && instructorMatch;
-      });
+      try {
+        const response = await axios.get(apiUrl, { params: searchParams });
+        this.results = response.data;
+      } catch (error) {
+        console.error('搜索课程时出错:', error);
+        // 搜索失败时使用mock数据作为后备
+        this.results = this.mockResults.filter(course => {
+          const nameMatch = !searchParams.course_name || course['课程名称'].includes(searchParams.course_name);
+          const instructorMatch = !searchParams.instructor || course['授课老师'].includes(searchParams.instructor);
+          return nameMatch && instructorMatch;
+        });
+      }
     },
-    // 注释掉原有的API调用
-    /*
     async fetchStatistics() {
       try {
-        const response = await axios.get(Statistic);
+        console.log('正在获取统计数据...');
+        const response = await axios.get(statisticUrl);
+        console.log('统计数据响应:', response);
         const data = response.data;
         this.visitCount = data.visitCount;
         this.evaluationCount = data.evaluationCount;
+        console.log('统计数据获取成功:', this.visitCount, this.evaluationCount);
       } catch (error) {
-        ElMessage.error('统计数据获取失败');
+        console.error('统计数据获取失败:', error);
+        if (error.response) {
+          // 服务器响应了，但状态码不在 2xx 范围
+          console.error('响应状态:', error.response.status);
+          console.error('响应数据:', error.response.data);
+        } else if (error.request) {
+          // 请求已发送，但没有收到响应
+          console.error('请求已发送，但没有收到响应');
+        } else {
+          // 设置请求时发生错误
+          console.error('错误信息:', error.message);
+        }
+        // 使用默认值
+        this.visitCount = 0;
+        this.evaluationCount = 0;
       }
     },
-    */
     handleSurveyCompleted() {
       this.surveyCompleted = true;
       Cookies.set('surveyCompleted', 'true', { expires: 90 });
