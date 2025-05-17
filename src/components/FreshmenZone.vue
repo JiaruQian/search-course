@@ -172,7 +172,7 @@ export default {
       });
     },
     goToCourseSearch() {
-      window.location.href = '/';
+      this.$emit('surveyCompleted');
     }
   }
 };

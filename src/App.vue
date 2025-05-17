@@ -53,6 +53,16 @@
               <el-icon><User /></el-icon>
               新生专区
             </el-button>
+            <!-- 课程推广按钮 - 所有状态下都显示 -->
+            <el-button 
+              type="danger" 
+              size="large" 
+              @click="currentPage = 'promotion'"
+              class="action-button"
+            >
+              <el-icon><Promotion /></el-icon>
+              课程推广
+            </el-button>
             <template v-if="courseEvaluationFilled || surveyCompleted">
               <el-button 
                 type="primary" 
@@ -88,6 +98,7 @@
             <AddCourse v-if="currentPage === 'add'" @courseAdded="courseAdded"></AddCourse>
             <FreshmenZone v-if="currentPage === 'freshmen'" @surveyCompleted="handleSurveyCompleted"></FreshmenZone>
             <AIRAG v-if="currentPage === 'airag'"></AIRAG>
+            <CoursePromotion v-if="currentPage === 'promotion'"></CoursePromotion>
             <div v-if="currentPage === 'search'" class="search-container">
               <SearchForm @search="handleSearch"></SearchForm>
               <div v-if="results.length">
@@ -123,7 +134,7 @@ import SearchForm from './components/SearchForm.vue';
 // axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
 // axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
 // axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization';
-import { Calendar, Document, Plus, User, Search, Edit, Connection } from '@element-plus/icons-vue';
+import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion } from '@element-plus/icons-vue';
 // const apiUrl = process.env.NODE_ENV === 'development'
 //   ? 'http://127.0.0.1:5000/search'
 //   : 'http://103.20.220.93:5000/search';
@@ -142,6 +153,9 @@ const FreshmenZone = defineAsyncComponent(() =>
 const AIRAG = defineAsyncComponent(() =>
   import('./components/AIRAG.vue')
 );
+const CoursePromotion = defineAsyncComponent(() =>
+  import('./components/CoursePromotion.vue')
+);
 // const apiUrl = process.env.NODE_ENV === 'development'
 //   ? 'http://127.0.0.1:5000/search'
 //   : 'http://103.20.220.93:5000/search';
@@ -155,13 +169,15 @@ export default {
     SearchResults,
     FreshmenZone,
     AIRAG,
+    CoursePromotion,
     Calendar,
     Document,
     Plus,
     User,
     Search,
     Edit,
-    Connection
+    Connection,
+    Promotion
   },
   data() {
     return {
@@ -207,11 +223,17 @@ export default {
     };
   },
   created() {
+    // 清除之前可能存在的 cookie
+    Cookies.remove('courseEvaluationFilled');
+    Cookies.remove('surveyCompleted');
+    
+    // 然后正常检测 cookie 状态（此时应该为 false）
     this.courseEvaluationFilled = Cookies.get('courseEvaluationFilled') === 'true';
     this.surveyCompleted = Cookies.get('surveyCompleted') === 'true';
     if (this.courseEvaluationFilled || this.surveyCompleted) {
       this.currentPage = 'search';
     }
+    
     // 使用模拟数据
     this.visitCount = 156;
     this.evaluationCount = 89;
