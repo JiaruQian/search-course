@@ -101,7 +101,7 @@
             <CoursePromotion v-if="currentPage === 'promotion'"></CoursePromotion>
             <div v-if="currentPage === 'search'" class="search-container">
               <SearchForm @search="handleSearch"></SearchForm>
-              <div v-if="results.length">
+              <div v-if="results && results.length">
                 <SearchResults :results="results"></SearchResults>
               </div>
               <div v-else>
@@ -252,16 +252,42 @@ export default {
     },
     async handleSearch(searchParams) {
       try {
+        console.log('发送搜索请求:', apiUrl, '参数:', searchParams);
         const response = await axios.get(apiUrl, { params: searchParams });
-        this.results = response.data;
+        console.log('搜索响应:', response);
+        
+        if (response.data && Array.isArray(response.data)) {
+          this.results = response.data;
+          console.log(`找到 ${this.results.length} 条结果`);
+        } else {
+          console.warn('搜索响应不是数组格式:', response.data);
+          this.results = [];
+        }
       } catch (error) {
         console.error('搜索课程时出错:', error);
-        // 搜索失败时使用mock数据作为后备
-        this.results = this.mockResults.filter(course => {
-          const nameMatch = !searchParams.course_name || course['课程名称'].includes(searchParams.course_name);
-          const instructorMatch = !searchParams.instructor || course['授课老师'].includes(searchParams.instructor);
-          return nameMatch && instructorMatch;
-        });
+        if (error.response) {
+          // 服务器响应了，但状态码不在 2xx 范围
+          console.error('错误状态码:', error.response.status);
+          console.error('错误数据:', error.response.data);
+        } else if (error.request) {
+          // 请求已发送，但没有收到响应
+          console.error('请求已发送但没有收到响应');
+        } else {
+          // 设置请求时发生了一些事情，触发了错误
+          console.error('错误信息:', error.message);
+        }
+        
+        // 搜索失败时使用mock数据作为后备，如果无mock数据匹配则使用空数组
+        if (this.mockResults && this.mockResults.length) {
+          console.log('使用模拟数据作为后备');
+          this.results = this.mockResults.filter(course => {
+            const nameMatch = !searchParams.course_name || course['课程名称'].includes(searchParams.course_name);
+            const instructorMatch = !searchParams.instructor || course['授课老师'].includes(searchParams.instructor);
+            return nameMatch && instructorMatch;
+          });
+        } else {
+          this.results = [];
+        }
       }
     },
     async fetchStatistics() {

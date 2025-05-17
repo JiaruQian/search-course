@@ -75,6 +75,9 @@ import Cookies from 'js-cookie';
 // axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
 // axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
 
+// 添加API URL配置
+const apiBaseUrl = 'http://localhost:8082'; // 保持与App.vue中相同的地址
+
 export default {
   data() {
     return {
@@ -112,7 +115,7 @@ export default {
         console.log('正在提交课程评价...');
         console.log('提交数据:', courseData);
         // 提交数据到后端API
-        const response = await axios.post('/add_course', courseData);
+        const response = await axios.post(`${apiBaseUrl}/add_course`, courseData);
         console.log('添加课程响应:', response);
         
         alert('课程评价提交成功');
