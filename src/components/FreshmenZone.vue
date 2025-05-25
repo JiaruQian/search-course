@@ -159,7 +159,7 @@ export default {
           try {
             // 构造符合API格式的数据
             const surveyPayload = {
-              curricula: this.surveyData.curricula,
+              curricula: this.surveyData.curricula, // 直接使用布尔值
               accept: this.surveyData.accept,
               expectation: this.surveyData.expectation,
               suggestions: this.surveyData.suggestions || '' // 如果suggestions为空，发送空字符串
@@ -178,11 +178,21 @@ export default {
             }
           } catch (error) {
             console.error('提交问卷时出错:', error);
-            this.$message.error('提交问卷时出错，请稍后再试。');
+            this.$notify({
+              title: '错误',
+              message: error.response?.data?.message || '提交失败，请稍后重试',
+              type: 'error',
+              duration: 3000
+            });
           }
         } else {
           console.log('表单验证失败');
-          this.$message.warning('请完整填写所有必填项');
+          this.$notify({
+            title: '警告',
+            message: '请完整填写所有必填项',
+            type: 'warning',
+            duration: 3000
+          });
           return false;
         }
       });

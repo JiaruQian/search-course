@@ -32,37 +32,41 @@
       <el-row type="flex" justify="center">
         <el-col :xs="24" :sm="22" :md="20" :lg="18" :xl="16">
           <div class="button-container">
-            <!-- 仅在没有 surveyCompleted Cookies 时显示新生专区按钮 -->
-            <el-button 
-              type="primary" 
-              size="large" 
-              @click="currentPage = 'add'" 
-              v-if="!courseEvaluationFilled & !surveyCompleted"
-              class="action-button"
-            >
-              <el-icon><Plus /></el-icon>
-              添加课程评价
-            </el-button>
-            <el-button 
-              type="success" 
-              size="large" 
-              v-if="!surveyCompleted && !courseEvaluationFilled" 
-              @click="currentPage = 'freshmen'"
-              class="action-button"
-            >
-              <el-icon><User /></el-icon>
-              新生专区
-            </el-button>
-            <!-- 课程推广按钮 - 所有状态下都显示 -->
+            <!-- 学生功能按钮 -->
+            <div class="student-buttons" v-if="!courseEvaluationFilled && !surveyCompleted">
+              <el-button 
+                type="primary" 
+                size="large" 
+                @click="currentPage = 'add'" 
+                class="action-button"
+              >
+                <el-icon><Plus /></el-icon>
+                添加课程评价
+              </el-button>
+              <el-button 
+                type="success" 
+                size="large" 
+                @click="currentPage = 'freshmen'"
+                class="action-button"
+              >
+                <el-icon><User /></el-icon>
+                新生专区
+              </el-button>
+            </div>
+
+            <!-- 课程推广按钮 - 仅在未获得cookie时显示 -->
             <el-button 
               type="danger" 
               size="large" 
               @click="currentPage = 'promotion'"
               class="action-button"
+              v-if="!courseEvaluationFilled && !surveyCompleted"
             >
               <el-icon><Promotion /></el-icon>
               课程推广
             </el-button>
+
+            <!-- 学生功能按钮 - 需要cookie -->
             <template v-if="courseEvaluationFilled || surveyCompleted">
               <el-button 
                 type="primary" 
@@ -91,6 +95,15 @@
                 <el-icon><Connection /></el-icon>
                 AI辅助推荐
               </el-button>
+              <el-button 
+                type="success" 
+                size="large" 
+                @click="currentPage = 'promoted-courses'"
+                class="action-button"
+              >
+                <el-icon><List /></el-icon>
+                已推广课程
+              </el-button>
             </template>
           </div>
 
@@ -99,6 +112,7 @@
             <FreshmenZone v-if="currentPage === 'freshmen'" @surveyCompleted="handleSurveyCompleted"></FreshmenZone>
             <AIRAG v-if="currentPage === 'airag'"></AIRAG>
             <CoursePromotion v-if="currentPage === 'promotion'"></CoursePromotion>
+            <PromotedCourses v-if="currentPage === 'promoted-courses'"></PromotedCourses>
             <div v-if="currentPage === 'search'" class="search-container">
               <SearchForm @search="handleSearch"></SearchForm>
               <div v-if="results && results.length">
@@ -126,7 +140,7 @@ import { defineAsyncComponent } from 'vue';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import SearchForm from './components/SearchForm.vue';
-import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion } from '@element-plus/icons-vue';
+import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion, List } from '@element-plus/icons-vue';
 
 // 设置API URL
 const apiBaseUrl = 'http://localhost:8082'; // 如果后续需要从env文件读取，可以改为 import.meta.env.VITE_API_BASE_URL
@@ -157,6 +171,9 @@ const AIRAG = defineAsyncComponent(() =>
 const CoursePromotion = defineAsyncComponent(() =>
   import('./components/CoursePromotion.vue')
 );
+const PromotedCourses = defineAsyncComponent(() =>
+  import('./components/PromotedCourses.vue')
+);
 
 export default {
   components: {
@@ -166,6 +183,7 @@ export default {
     FreshmenZone,
     AIRAG,
     CoursePromotion,
+    PromotedCourses,
     Calendar,
     Document,
     Plus,
@@ -173,7 +191,8 @@ export default {
     Search,
     Edit,
     Connection,
-    Promotion
+    Promotion,
+    List
   },
   data() {
     return {
