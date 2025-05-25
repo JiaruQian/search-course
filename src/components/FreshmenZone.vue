@@ -157,16 +157,32 @@ export default {
       this.$refs.surveyForm.validate(async (valid) => {
         if (valid) {
           try {
+            // 构造符合API格式的数据
+            const surveyPayload = {
+              curricula: this.surveyData.curricula,
+              accept: this.surveyData.accept,
+              expectation: this.surveyData.expectation,
+              suggestions: this.surveyData.suggestions || '' // 如果suggestions为空，发送空字符串
+            };
+
             // 提交数据到后端API
-            await axios.post('/submit_survey', this.surveyData);
-            Cookies.set('surveyCompleted', 'true', { expires: 200 });
-            this.nextStep();
+            const response = await axios.post('/submit_survey', surveyPayload);
+            
+            if (response.status === 200) {
+              // 设置cookie表示问卷已完成
+              Cookies.set('surveyCompleted', 'true', { expires: 200 });
+              this.$message.success('问卷提交成功！');
+              this.nextStep();
+            } else {
+              throw new Error('提交失败');
+            }
           } catch (error) {
             console.error('提交问卷时出错:', error);
             this.$message.error('提交问卷时出错，请稍后再试。');
           }
         } else {
           console.log('表单验证失败');
+          this.$message.warning('请完整填写所有必填项');
           return false;
         }
       });

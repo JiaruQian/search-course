@@ -145,36 +145,41 @@ export default {
 
       this.loading = true;
 
-      const courseData = {
-        course_name: this.course_name,
-        course_attribute: this.course_attribute,
-        elective_field: this.course_attribute === '通识选修课（公选课）' ? this.elective_field : '',
-        instructor: this.instructor,
-        credit: this.credit,
-        content: this.content,
-        attendance: this.attendance,
-        assessment: this.assessment,
-        highlights: this.highlights,
-        suitable_students: this.suitable_students,
-        resources: this.resources
-      };
-
       try {
+        // 构造符合API格式的数据
+        const courseData = {
+          course_name: this.course_name,
+          course_attribute: this.course_attribute,
+          elective_field: this.course_attribute === '通识选修课（公选课）' ? this.elective_field : '',
+          instructor: this.instructor,
+          credit: this.credit,
+          content: this.content,
+          attendance: this.attendance,
+          assessment: this.assessment,
+          highlights: this.highlights,
+          suitable_students: this.suitable_students,
+          resources: this.resources
+        };
+
         // 调用API提交课程推广信息
-        await axios.post('/course_promotion', courseData);
+        const response = await axios.post('/course_promotion', courseData);
         
-        this.$notify({
-          title: '成功',
-          message: '课程推广信息已提交',
-          type: 'success',
-          duration: 3000
-        });
-        this.resetForm();
+        if (response.status === 200) {
+          this.$notify({
+            title: '成功',
+            message: '课程推广信息已成功提交',
+            type: 'success',
+            duration: 3000
+          });
+          this.resetForm();
+        } else {
+          throw new Error('提交失败');
+        }
       } catch (error) {
-        console.error('Error promoting course:', error);
+        console.error('提交课程推广信息时出错:', error);
         this.$notify({
           title: '错误',
-          message: '提交失败，请稍后重试',
+          message: error.response?.data?.message || '提交失败，请稍后重试',
           type: 'error',
           duration: 3000
         });
