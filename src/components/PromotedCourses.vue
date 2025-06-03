@@ -24,14 +24,11 @@
           class="search-input search-input-short"
           clearable
         />
-        <el-input
-          v-model="keyword"
-          placeholder="关键词"
-          class="search-input search-input-short"
-          clearable
-        />
         <el-button type="primary" @click="handleSearch">
           搜索
+        </el-button>
+        <el-button @click="handleClearSearch">
+          显示全部
         </el-button>
       </div>
     </div>
@@ -100,91 +97,124 @@ export default {
       courses: [],
       courseName: '',
       instructor: '',
-      keyword: '',
       loading: false
     };
   },
   computed: {
     filteredCourses() {
-      return this.courses.filter(course => {
-        const matchName = this.courseName ? course.course_name.toLowerCase().includes(this.courseName.toLowerCase()) : true;
-        const matchInstructor = this.instructor ? course.instructor.toLowerCase().includes(this.instructor.toLowerCase()) : true;
-        const matchKeyword = this.keyword
-          ? (
-              course.course_name.toLowerCase().includes(this.keyword.toLowerCase()) ||
-              course.instructor.toLowerCase().includes(this.keyword.toLowerCase()) ||
-              course.content.toLowerCase().includes(this.keyword.toLowerCase()) ||
-              course.highlights.toLowerCase().includes(this.keyword.toLowerCase())
-            )
-          : true;
-        return matchName && matchInstructor && matchKeyword;
-      });
+      // 由于搜索现在通过API处理，直接返回课程列表
+      return this.courses;
     }
   },
   methods: {
-    async fetchCourses() {
+    async fetchCourses(params = {}) {
       this.loading = true;
       try {
-        const response = await axios.get('/course_promotion');
-        if (response.status === 200) {
-          this.courses = response.data;
+        // 构建查询参数
+        const queryParams = {};
+        if (params.course_name) {
+          queryParams.course_name = params.course_name;
+        }
+        if (params.instructor) {
+          queryParams.instructor = params.instructor;
+        }
+
+        const response = await axios.get('/course_promotion', {
+          params: queryParams
+        });
+        
+        if (response.status === 200 && response.data.success) {
+          this.courses = response.data.data;
+          this.$notify({
+            title: '成功',
+            message: response.data.message || '获取课程列表成功',
+            type: 'success',
+            duration: 3000
+          });
+        } else {
+          throw new Error(response.data.message || '获取课程列表失败');
         }
       } catch (error) {
         console.error('获取课程列表失败:', error);
-        // 使用模拟数据
-        this.courses = [
-          {
-            course_name: "高等数学",
-            course_attribute: "公共课",
-            elective_field: "",
-            instructor: "张教授",
-            credit: 4,
-            content: "本课程主要讲授微积分的基本概念、理论和方法，包括函数、极限、连续、导数、积分等内容。通过本课程的学习，学生将掌握微积分的基本理论和应用方法。",
-            attendance: "每周点名，缺勤不得超过3次。平时作业每周一次，占总成绩的20%。",
-            assessment: "期末考试占60%，平时成绩占40%（包括作业、出勤和课堂表现）。",
-            highlights: "课程内容系统完整，讲解深入浅出，注重实际应用。提供丰富的习题和练习，帮助学生巩固所学知识。",
-            suitable_students: "适合理工科专业的学生，特别是需要扎实数学基础的专业。",
-            resources: ["教材", "PPT", "习题集", "在线视频"]
-          },
-          {
-            course_name: "中国传统文化",
-            course_attribute: "通识选修课（公选课）",
-            elective_field: "中华文化与世界文明",
-            instructor: "李教授",
-            credit: 2,
-            content: "本课程系统介绍中国传统文化的基本内容、发展历程和现代价值，包括哲学思想、文学艺术、科技成就等方面。",
-            attendance: "不定期点名，需要完成一篇课程论文。",
-            assessment: "课程论文占60%，平时表现占40%。",
-            highlights: "课程内容丰富多样，结合现代视角解读传统文化，注重培养学生的文化素养。",
-            suitable_students: "适合所有专业的学生，特别是对中华文化感兴趣的同学。",
-            resources: ["教材", "参考资料", "视频资源"]
-          },
-          {
-            course_name: "数据结构与算法",
-            course_attribute: "专业课程",
-            elective_field: "",
-            instructor: "王教授",
-            credit: 3,
-            content: "本课程介绍基本的数据结构和算法设计方法，包括线性表、树、图等数据结构，以及排序、查找等基本算法。",
-            attendance: "每周实验课，需要完成实验报告。平时作业每周一次。",
-            assessment: "期末考试占50%，实验成绩占30%，平时作业占20%。",
-            highlights: "课程理论与实践相结合，提供大量编程练习，帮助学生掌握算法设计思想。",
-            suitable_students: "适合计算机相关专业的学生，需要具备基本的编程基础。",
-            resources: ["教材", "PPT", "实验指导书", "在线编程平台"]
-          }
-        ];
-        this.$notify({
-          title: '提示',
-          message: '当前显示的是模拟数据',
-          type: 'info',
-          duration: 3000
-        });
+        
+        // 检查是否是网络错误或服务器错误
+        if (error.response && error.response.status >= 400) {
+          this.$notify({
+            title: '错误',
+            message: error.response.data?.message || '服务器错误',
+            type: 'error',
+            duration: 3000
+          });
+        } else {
+          // 使用模拟数据作为fallback
+          this.courses = [
+            {
+              course_name: "高等数学",
+              course_attribute: "公共课",
+              elective_field: "",
+              instructor: "张教授",
+              credit: "4",
+              content: "本课程主要讲授微积分的基本概念、理论和方法，包括函数、极限、连续、导数、积分等内容。通过本课程的学习，学生将掌握微积分的基本理论和应用方法。",
+              attendance: "每周点名，缺勤不得超过3次。平时作业每周一次，占总成绩的20%。",
+              assessment: "期末考试占60%，平时成绩占40%（包括作业、出勤和课堂表现）。",
+              highlights: "课程内容系统完整，讲解深入浅出，注重实际应用。提供丰富的习题和练习，帮助学生巩固所学知识。",
+              suitable_students: "适合理工科专业的学生，特别是需要扎实数学基础的专业。",
+              resources: ["教材", "PPT", "习题集", "在线视频"]
+            },
+            {
+              course_name: "中国传统文化",
+              course_attribute: "通识选修课（公选课）",
+              elective_field: "中华文化与世界文明",
+              instructor: "李教授",
+              credit: "2",
+              content: "本课程系统介绍中国传统文化的基本内容、发展历程和现代价值，包括哲学思想、文学艺术、科技成就等方面。",
+              attendance: "不定期点名，需要完成一篇课程论文。",
+              assessment: "课程论文占60%，平时表现占40%。",
+              highlights: "课程内容丰富多样，结合现代视角解读传统文化，注重培养学生的文化素养。",
+              suitable_students: "适合所有专业的学生，特别是对中华文化感兴趣的同学。",
+              resources: ["教材", "参考资料", "视频资源"]
+            },
+            {
+              course_name: "数据结构与算法",
+              course_attribute: "专业课程",
+              elective_field: "",
+              instructor: "王教授",
+              credit: "3",
+              content: "本课程介绍基本的数据结构和算法设计方法，包括线性表、树、图等数据结构，以及排序、查找等基本算法。",
+              attendance: "每周实验课，需要完成实验报告。平时作业每周一次。",
+              assessment: "期末考试占50%，实验成绩占30%，平时作业占20%。",
+              highlights: "课程理论与实践相结合，提供大量编程练习，帮助学生掌握算法设计思想。",
+              suitable_students: "适合计算机相关专业的学生，需要具备基本的编程基础。",
+              resources: ["教材", "PPT", "实验指导书", "在线编程平台"]
+            }
+          ];
+          this.$notify({
+            title: '提示',
+            message: '无法连接到服务器，当前显示的是模拟数据',
+            type: 'warning',
+            duration: 3000
+          });
+        }
       } finally {
         this.loading = false;
       }
     },
     handleSearch() {
-      // 由于使用了计算属性 filteredCourses，点击搜索按钮时无需额外处理
+      // 使用搜索参数重新获取课程列表
+      const searchParams = {};
+      if (this.courseName.trim()) {
+        searchParams.course_name = this.courseName.trim();
+      }
+      if (this.instructor.trim()) {
+        searchParams.instructor = this.instructor.trim();
+      }
+      
+      this.fetchCourses(searchParams);
+    },
+    handleClearSearch() {
+      this.courseName = '';
+      this.instructor = '';
+      this.fetchCourses();
     },
     getCourseTypeTag(type) {
       const typeMap = {
