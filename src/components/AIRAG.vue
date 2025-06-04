@@ -15,53 +15,13 @@
           <el-form :model="formData" :rules="rules" ref="formRef" label-position="top">
             <el-row :gutter="20">
               <el-col :xs="24" :sm="12">
-                <el-form-item label="课程名称" prop="course">
-                  <el-input v-model="formData.course" placeholder="请输入课程名称">
-                    <template #prefix>
-                      <el-icon><Reading /></el-icon>
-                    </template>
-                  </el-input>
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="12">
                 <el-form-item label="课程类别" prop="category">
                   <el-select v-model="formData.category" placeholder="请选择课程类别" style="width: 100%">
-                    <el-option label="体育课" value="体育课"></el-option>
-                    <el-option label="通识选修课（公选课）" value="通识选修课（公选课）"></el-option>
-                    <el-option label="公共课" value="公共课"></el-option>
-                    <el-option label="专业课程" value="专业课程"></el-option>
-                    <el-option label="通识必修课（导引）" value="通识必修课（导引）"></el-option>
-                  </el-select>
-                </el-form-item>
-              </el-col>
-            </el-row>
-
-            <el-row :gutter="20">
-              <el-col :xs="24" :sm="8">
-                <el-form-item label="结课方式" prop="examType">
-                  <el-select v-model="formData.examType" placeholder="请选择结课方式" style="width: 100%">
-                    <el-option label="期末考试" value="期末考试"></el-option>
-                    <el-option label="论文" value="论文"></el-option>
-                    <el-option label="项目" value="项目"></el-option>
-                    <el-option label="其他" value="其他"></el-option>
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="8">
-                <el-form-item label="给分情况" prop="grading">
-                  <el-select v-model="formData.grading" placeholder="请选择给分情况" style="width: 100%">
-                    <el-option label="给分宽松" value="给分宽松"></el-option>
-                    <el-option label="给分一般" value="给分一般"></el-option>
-                    <el-option label="给分严格" value="给分严格"></el-option>
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="8">
-                <el-form-item label="内容难易" prop="difficulty">
-                  <el-select v-model="formData.difficulty" placeholder="请选择内容难易" style="width: 100%">
-                    <el-option label="简单" value="简单"></el-option>
-                    <el-option label="中等" value="中等"></el-option>
-                    <el-option label="困难" value="困难"></el-option>
+                    <el-option label="体育课" value=1></el-option>
+                    <el-option label="通识选修课（公选课）" value=2></el-option>
+                    <el-option label="公共课" value=3></el-option>
+                    <el-option label="专业课程" value=4></el-option>
+                    <el-option label="通识必修课（导引）" value=5></el-option>
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -116,13 +76,12 @@
 </template>
 
 <script>
-import { Reading, ArrowRight, Back } from '@element-plus/icons-vue'
+import { ArrowRight, Back } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 export default {
   name: 'AIRAG',
   components: {
-    Reading,
     ArrowRight,
     Back
   },
@@ -130,28 +89,12 @@ export default {
     return {
       activeStep: 0,
       formData: {
-        course: '',
         category: '',
-        examType: '',
-        grading: '',
-        difficulty: '',
         description: ''
       },
       rules: {
-        course: [
-          { required: true, message: '请输入课程名称', trigger: 'blur' }
-        ],
         category: [
-          { required: true, message: '请选择课程类别', trigger: 'change' }
-        ],
-        examType: [
-          { required: true, message: '请选择结课方式', trigger: 'change' }
-        ],
-        grading: [
-          { required: true, message: '请选择给分情况', trigger: 'change' }
-        ],
-        difficulty: [
-          { required: true, message: '请选择内容难易', trigger: 'change' }
+          { required: false, message: '请选择课程类别', trigger: 'change', default: 0 }
         ],
         description: [
           { required: true, message: '请输入个人需求描述', trigger: 'blur' },
@@ -170,7 +113,7 @@ export default {
 
         try {
           // 调用后端AI推荐API
-          const response = await axios.post('/ai_recommendation', this.formData);
+          const response = await axios.post('http://localhost:8000/rag', this.formData);
           this.recommendations = response.data;
         } catch (error) {
           console.error('获取AI推荐失败:', error);
