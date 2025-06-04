@@ -112,11 +112,31 @@ export default {
         this.loading = true;
 
         try {
-          // 调用后端AI推荐API
-          const response = await axios.post('http://localhost:8000/rag', this.formData);
+          // 构造请求数据，注意字段名匹配后端期望
+          const requestData = {
+            userQuestion: this.formData.userQuestion,
+            catagory: this.formData.category  // 注意：后端期望的字段名是 catagory
+          };
+
+          // 调用8081端口的AI推荐API（独立于其他8082端口的功能）
+          const response = await axios.post('http://localhost:8081/rag', requestData, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            timeout: 30000  // 30秒超时，因为AI处理可能需要更长时间
+          });
           this.recommendations = response.data;
         } catch (error) {
           console.error('获取AI推荐失败:', error);
+          if (error.response) {
+            console.error('错误状态码:', error.response.status);
+            console.error('错误数据:', error.response.data);
+          } else if (error.request) {
+            console.error('请求已发送但没有收到响应');
+          } else {
+            console.error('错误信息:', error.message);
+          }
+          
           // 如果API调用失败，使用备用数据
           this.recommendations = [
             {
