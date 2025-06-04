@@ -27,10 +27,10 @@
               </el-col>
             </el-row>
 
-            <el-form-item label="个人需求描述" prop="description">
+            <el-form-item label="个人需求描述" prop="userQuestion">
               <el-input
                 type="textarea"
-                v-model="formData.description"
+                v-model="formData.userQuestion"
                 placeholder="请简要描述您的需求（30字左右）"
                 :maxlength="50"
                 show-word-limit
@@ -90,13 +90,13 @@ export default {
       activeStep: 0,
       formData: {
         category: '',
-        description: ''
+        userQuestion: ''
       },
       rules: {
         category: [
           { required: false, message: '请选择课程类别', trigger: 'change', default: 0 }
         ],
-        description: [
+        userQuestion: [
           { required: true, message: '请输入个人需求描述', trigger: 'blur' },
           { min: 0, max: 50, message: '描述长度在0到50个字符之间', trigger: 'blur' }
         ]
