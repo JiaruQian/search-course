@@ -17,11 +17,12 @@
               <el-col :xs="24" :sm="12">
                 <el-form-item label="课程类别" prop="category">
                   <el-select v-model="formData.category" placeholder="请选择课程类别" style="width: 100%">
-                    <el-option label="体育课" value=1></el-option>
-                    <el-option label="通识选修课（公选课）" value=2></el-option>
-                    <el-option label="公共课" value=3></el-option>
-                    <el-option label="专业课程" value=4></el-option>
-                    <el-option label="通识必修课（导引）" value=5></el-option>
+                    <el-option label="体育课" :value="1"></el-option>
+                    <el-option label="通识选修课（公选课）" :value="2"></el-option>
+                    <el-option label="公共课" :value="3"></el-option>
+                    <el-option label="专业课程" :value="4"></el-option>
+                    <el-option label="通识必修课（导引）" :value="5"></el-option>
+                    <el-option label="任意" :value="0"></el-option>
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -90,11 +91,11 @@ export default {
       activeStep: 0,
       formData: {
         category: '',
-        userQuestion: ''
+        userQuestion: 0,
       },
       rules: {
         category: [
-          { required: false, message: '请选择课程类别', trigger: 'change', default: 0 }
+          { required: false, message: '请选择课程类别', trigger: 'change'}
         ],
         userQuestion: [
           { required: true, message: '请输入个人需求描述', trigger: 'blur' },
@@ -140,16 +141,16 @@ export default {
           // 如果API调用失败，使用备用数据
           this.recommendations = [
             {
-              course: '高等数学',
-              reason: '根据您的需求，这门课程的教学方式灵活，给分较为宽松，适合您的学习风格。'
+              course: '公共关系学',
+              reason: '多个评价显示给分很好(95分), 开卷考试简单, 老师有趣且考勤灵活'
             },
             {
-              course: '线性代数',
-              reason: '课程内容循序渐进，考核方式合理，符合您的期望。'
+              course: '治水与社会发展',
+              reason: '多个评价一致称赞给分好(90+), 老师优秀, 论文结课要求宽松'
             },
             {
-              course: '中国传统文化',
-              reason: '课程生动有趣，考核方式灵活，适合您的学习需求。'
+              course: '电影艺术与大众文化',
+              reason: '给分好(95分), 上课轻松有趣, 可看电影, 论文结课方式灵活'
             }
           ];
         }
