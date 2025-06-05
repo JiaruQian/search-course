@@ -57,19 +57,42 @@
             </el-button>
           </div>
           
-          <el-row :gutter="20">
+            <!-- ✅ 1. 推荐课程展示 -->
+            <el-row :gutter="20" v-if="recommendations.length > 0">
             <el-col :xs="24" :sm="12" :md="8" v-for="(rec, index) in recommendations" :key="index">
-              <el-card class="recommendation-card" :body-style="{ padding: '0px' }" shadow="hover">
+                <el-card class="recommendation-card" :body-style="{ padding: '0px' }" shadow="hover">
                 <div class="card-header">
-                  <span class="course-name">{{ rec.course }}</span>
-                  <el-tag size="small" :type="getTagType(index)">推荐度 {{ index + 1 }}</el-tag>
+                    <span class="course-name">{{ rec.course }}</span>
+                    <el-tag size="small" :type="getTagType(index)">推荐度 {{ index + 1 }}</el-tag>
                 </div>
                 <div class="card-content">
-                  <p class="reason">{{ rec.reason }}</p>
+                    <p class="reason">{{ rec.reason }}</p>
                 </div>
-              </el-card>
+                </el-card>
             </el-col>
-          </el-row>
+            </el-row>
+
+            <!-- ✅ 2. LLM Response Text 直接展示 -->
+            <div v-if="llm_response_text" style="margin-top: 20px;">
+            <el-card v-if="llm_response_text">
+                <h3>LLM 思考过程：</h3>
+                <div v-html="llm_response_html" style="white-space: normal;"></div>
+            </el-card>
+            </div>
+
+            <!-- ✅ 3. 折叠区域：原始 LLM 输出和 RAG 检索结果 -->
+            <div style="margin-top: 20px;">
+            <el-collapse>
+                <el-collapse-item title="🔍 调试信息（LLM 原始输出 + RAG 检索结果）" name="1">
+                <el-card>
+                    <h4>LLM 原始输出：</h4>
+                    <pre style="white-space: pre-wrap;">{{ llm_output }}</pre>
+                    <h4>RAG 检索结果：</h4>
+                    <pre style="white-space: pre-wrap;">{{ JSON.stringify(rag_results, null, 2) }}</pre>
+                </el-card>
+                </el-collapse-item>
+            </el-collapse>
+            </div>
         </div>
       </el-col>
     </el-row>
@@ -77,6 +100,8 @@
 </template>
 
 <script>
+
+import MarkdownIt from 'markdown-it';
 import { ArrowRight, Back } from '@element-plus/icons-vue'
 import axios from 'axios'
 
@@ -103,8 +128,17 @@ export default {
         ]
       },
       loading: false,
-      recommendations: []
+      recommendations: [],
+      llm_output: "",
+      llm_response_text: "",
+      rag_results: [],
+      md: new MarkdownIt(),
     };
+  },
+  computed: {
+    llm_response_html() {
+      return this.md.render(this.llm_response_text || '');
+    }
   },
   methods: {
     async submitForm() {
@@ -120,13 +154,20 @@ export default {
           };
 
           // 调用8081端口的AI推荐API（独立于其他8082端口的功能）
-          const response = await axios.post('http://localhost:8081/rag', requestData, {
+          const response = await axios.post('http://172.23.221.29:8081/rag', requestData, {
             headers: {
               'Content-Type': 'application/json'
             },
             timeout: 30000  // 30秒超时，因为AI处理可能需要更长时间
           });
-          this.recommendations = response.data;
+          const data = response.data.data;
+          this.llm_parse_status = data.llm_parse_status;
+          this.llm_response_text = data.llm_response_text;
+          this.llm_output = data.llm_output;
+          this.rag_results = data.rag_results;
+
+            // 只有 parse 成功才更新推荐项，否则不展示
+          this.recommendations = (data.llm_parse_status === 3) ? data.llm_response_list : [];
         } catch (error) {
           console.error('获取AI推荐失败:', error);
           if (error.response) {
