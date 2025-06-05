@@ -154,7 +154,7 @@ export default {
           };
 
           // 调用8081端口的AI推荐API（独立于其他8082端口的功能）
-          const response = await axios.post('http://172.23.221.29:8081/rag', requestData, {
+          const response = await axios.post('http://localhost:8081/rag', requestData, {
             headers: {
               'Content-Type': 'application/json'
             },
