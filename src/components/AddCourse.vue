@@ -70,14 +70,9 @@
 <script>
 import axios from 'axios';
 import Cookies from 'js-cookie';
-// 移除CORS头设置，应该由后端处理
-// axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*'
-// axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-// axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization'
-
 // 添加API URL配置
-const apiBaseUrl = 'http://localhost:8082'; // 保持与App.vue中相同的地址
-
+const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; // 保持与App.vue中相同的地址
+axios.defaults.baseURL = apiBaseUrl;
 export default {
   data() {
     return {
@@ -115,10 +110,13 @@ export default {
         console.log('正在提交课程评价...');
         console.log('提交数据:', courseData);
         // 提交数据到后端API
-        const response = await axios.post(`${apiBaseUrl}/add_course`, courseData);
+        const response = await axios.post(`/add_course`, courseData);
         console.log('添加课程响应:', response);
-        
-        alert('课程评价提交成功');
+        this.onQuestionnaireCompleted().then(() => {
+          alert('课程评价提交成功');
+        }).catch((error) => {
+          console.error('设置指纹失败:', error);
+        });
         Cookies.set('courseEvaluationFilled', 'true', { expires: 200 });
         this.courseEvaluationFilled = true;
         this.$emit('courseAdded');
@@ -137,7 +135,28 @@ export default {
         }
         alert('课程评价提交失败: ' + (error.response?.data?.message || error.message || '未知错误'));
       }
-    }
+    },
+    getNextThursdayDate(){
+        const now = new Date()
+        const dayOfWeek = now.getDay() // 0=Sunday, ..., 6=Saturday
+        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 下一个周四
+        const nextThursday = new Date(now)
+        nextThursday.setDate(now.getDate() + daysUntilThursday)
+        nextThursday.setHours(0, 0, 0, 0)
+        return nextThursday
+    },
+    setCookie(name, value, expires) {
+        document.cookie = `${name}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Strict`
+    },
+  async  onQuestionnaireCompleted() {
+        // 从LocalStorage获取指纹
+        let fingerprint = localStorage.getItem('fingerprint');
+        const expires = this.getNextThursdayDate()
+
+        // 设置指纹和使用次数 cookie
+        this.setCookie('fingerprint', fingerprint, expires)
+        this.setCookie('ai_uses_left', '10', expires)
+  }
   }
 };
 </script>

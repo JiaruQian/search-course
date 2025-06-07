@@ -79,7 +79,8 @@
 <script>
 import { ArrowRight, Back } from '@element-plus/icons-vue'
 import axios from 'axios'
-
+const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; 
+axios.defaults.baseURL = apiBaseUrl;
 export default {
   name: 'AIRAG',
   components: {
@@ -119,14 +120,21 @@ export default {
             catagory: this.formData.category  // 注意：后端期望的字段名是 catagory
           };
 
-          // 调用8081端口的AI推荐API（独立于其他8082端口的功能）
-          const response = await axios.post('http://localhost:8081/rag', requestData, {
+          // 调用8088端口的AI推荐API（独立于其他8082端口的功能）
+          // 从localStorage获取设备指纹
+          let deviceFingerprint = localStorage.getItem('deviceFingerprint');
+          if (!deviceFingerprint) {
+            // 如果没有设备指纹，报错
+            throw new Error('你的设备风险高，无法使用AI推荐功能');
+          }
+          const response = await axios.post('/rag', requestData, {
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'X-Device-Fingerprint': deviceFingerprint
             },
-            timeout: 30000  // 30秒超时，因为AI处理可能需要更长时间
+            timeout: 120000  // 120秒超时，因为AI处理可能需要更长时间
           });
-          this.recommendations = response.data;
+          this.recommendations = response.data.data.recommendations;
         } catch (error) {
           console.error('获取AI推荐失败:', error);
           if (error.response) {
@@ -154,7 +162,7 @@ export default {
             }
           ];
         }
-
+        console.log('AI推荐结果:', this.recommendations);
         // 进入下一步
         this.activeStep = 1;
 
@@ -170,6 +178,31 @@ export default {
     getTagType(index) {
       const types = ['success', 'warning', 'info'];
       return types[index] || 'info';
+    },
+    getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+      return match ? decodeURIComponent(match[2]) : null
+    },
+    decrementAIUsage() {
+    const uses = parseInt(this.getCookie('ai_uses_left') || '0', 10)
+    if (uses <= 0) {
+      alert('本周使用次数已用完，请下周四后再试')
+      return false
+    }
+
+    const newUses = uses - 1
+    const expires = this.getNextThursdayDate()
+    this.setCookie('ai_uses_left', newUses.toString(), expires)
+    return true
+  },
+  getNextThursdayDate(){
+        const now = new Date()
+        const dayOfWeek = now.getDay() // 0=Sunday, ..., 6=Saturday
+        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 下一个周四
+        const nextThursday = new Date(now)
+        nextThursday.setDate(now.getDate() + daysUntilThursday)
+        nextThursday.setHours(0, 0, 0, 0)
+        return nextThursday
     }
   }
 };

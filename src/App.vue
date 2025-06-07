@@ -52,10 +52,8 @@
                 <el-icon><User /></el-icon>
                 新生专区
               </el-button>
-            </div>
-
             <!-- 课程推广按钮 - 仅在未获得cookie时显示 -->
-            <el-button 
+              <el-button 
               type="danger" 
               size="large" 
               @click="currentPage = 'promotion'"
@@ -65,10 +63,11 @@
               <el-icon><Promotion /></el-icon>
               课程推广
             </el-button>
-
+            </div>
             <!-- 学生功能按钮 - 需要cookie -->
             <template v-if="courseEvaluationFilled || surveyCompleted">
-              <el-button 
+              <div class="student-buttons">
+                <el-button 
                 type="primary" 
                 size="large" 
                 @click="currentPage = 'search'"
@@ -104,6 +103,7 @@
                 <el-icon><List /></el-icon>
                 已推广课程
               </el-button>
+              </div>
             </template>
           </div>
 
@@ -141,11 +141,11 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import SearchForm from './components/SearchForm.vue';
 import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion, List } from '@element-plus/icons-vue';
-
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
 // 设置API URL
-const apiBaseUrl = 'http://localhost:8082'; // 如果后续需要从env文件读取，可以改为 import.meta.env.VITE_API_BASE_URL
-const apiUrl = `${apiBaseUrl}/search`;
-const statisticUrl = `${apiBaseUrl}/statistic`;
+const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; 
+const apiUrl = `/search`;
+const statisticUrl = `/statistic`;
 
 // 设置axios默认配置
 axios.defaults.baseURL = apiBaseUrl;
@@ -238,11 +238,7 @@ export default {
     };
   },
   created() {
-    // 清除之前可能存在的 cookie
-    Cookies.remove('courseEvaluationFilled');
-    Cookies.remove('surveyCompleted');
-    
-    // 然后正常检测 cookie 状态（此时应该为 false）
+    // 检测 cookie 状态（此时应该为 false）
     this.courseEvaluationFilled = Cookies.get('courseEvaluationFilled') === 'true';
     this.surveyCompleted = Cookies.get('surveyCompleted') === 'true';
     if (this.courseEvaluationFilled || this.surveyCompleted) {
@@ -251,6 +247,17 @@ export default {
     
     // 从后端API获取统计数据
     this.fetchStatistics();
+    // 获取设备指纹并存入localStorage
+    FingerprintJS.load().then(fp => {
+      fp.get().then(result => {
+        const fingerprint = result.visitorId;
+        localStorage.setItem('deviceFingerprint', fingerprint);
+      }).catch(error => {
+        console.error('获取设备指纹失败:', error);
+      });
+    }).catch(error => {
+      console.error('加载FingerprintJS失败:', error);
+    });
   },
   mounted() {
     this.$nextTick(() => {
@@ -271,13 +278,10 @@ export default {
     },
     async handleSearch(searchParams) {
       try {
-        console.log('发送搜索请求:', apiUrl, '参数:', searchParams);
         const response = await axios.get(apiUrl, { params: searchParams });
-        console.log('搜索响应:', response);
         
         if (response.data && Array.isArray(response.data)) {
           this.results = response.data;
-          console.log(`找到 ${this.results.length} 条结果`);
         } else {
           console.warn('搜索响应不是数组格式:', response.data);
           this.results = [];
@@ -426,6 +430,7 @@ main {
   height: 50px;
   font-size: 16px;
   transition: all 0.3s ease;
+  margin-left: 12px;  /* 设置每个按钮的右边距 */
 }
 
 .action-button:hover {
@@ -467,7 +472,11 @@ footer {
   font-size: 0.8em;
   opacity: 0.8;
 }
-
+.student-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 /* 响应式设计 */
 @media (max-width: 768px) {
   header {
