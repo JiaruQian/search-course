@@ -114,6 +114,16 @@
 </template>
 
 <script>
+/**
+ * FreshmenZone.vue - 新生专区组件
+ * 
+ * 功能：
+ * 1. 为新生提供网站功能介绍
+ * 2. 收集新生对选课系统的看法和期待
+ * 3. 完成问卷后授予查询权限
+ * 4. 提供选课相关的参考资料链接
+ */
+
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
@@ -121,12 +131,12 @@ export default {
   name: 'FreshmenZone',
   data() {
     return {
-      activeStep: 0,
+      activeStep: 0,  // 当前步骤（0: 介绍，1: 问卷，2: 完成）
       surveyData: {
-        curricula: null,
-        accept: null, 
-        suggestions: '',
-        expectation: 0
+        curricula: null,     // 是否了解选课体系
+        accept: null,        // 更看重教学还是给分
+        suggestions: '',     // 对学生社区的建议
+        expectation: 0       // 对大学课程的期待（1-10 分）
       },
       rules: {
         curricula: [
@@ -150,9 +160,17 @@ export default {
     };
   },
   methods: {
+    /**
+     * 进入下一步
+     */
     nextStep() {
       this.activeStep += 1;
     },
+    
+    /**
+     * 提交问卷调查
+     * 验证表单后发送到后端，成功后授予查询权限
+     */
     async submitSurvey() {
       this.$refs.surveyForm.validate(async (valid) => {
         if (valid) {
@@ -197,6 +215,10 @@ export default {
         }
       });
     },
+    /**
+     * 跳转到课程查询页面
+     * 通知父组件问卷已完成
+     */
     goToCourseSearch() {
       this.$emit('surveyCompleted');
     }

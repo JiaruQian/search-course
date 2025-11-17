@@ -136,43 +136,52 @@
 </template>
 
 <script>
+/**
+ * App.vue - 应用根组件
+ * 
+ * 主要功能：
+ * 1. 管理页面导航和路由状态
+ * 2. 处理用户权限验证（Cookie 和设备指纹）
+ * 3. 统一管理 API 请求
+ * 4. 展示统计数据
+ * 5. 协调各子组件之间的通信
+ */
+
 import { defineAsyncComponent } from 'vue';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import SearchForm from './components/SearchForm.vue';
 import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion, List } from '@element-plus/icons-vue';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
-// 设置API URL
-const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; 
-const apiUrl = `/search`;
-const statisticUrl = `/statistic`;
 
-// 设置axios默认配置
+// API 地址配置
+const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; // 从环境变量读取 API 基础地址
+const apiUrl = `/search`;          // 课程搜索接口
+const statisticUrl = `/statistic`; // 统计数据接口
+
+// 配置 axios 默认设置
 axios.defaults.baseURL = apiBaseUrl;
-// 不需要在客户端设置这些CORS头，由服务器端处理
-// axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
-// axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-// axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization';
-// 设置默认的content-type
+// 注意：CORS 头部应由服务器端设置，客户端无需设置
 axios.defaults.headers.post['Content-Type'] = 'application/json';
 
+// 使用异步组件加载，提升首屏加载性能
 const AddCourse = defineAsyncComponent(() =>
-  import('./components/AddCourse.vue')
+  import('./components/AddCourse.vue')        // 添加课程评价组件
 );
 const SearchResults = defineAsyncComponent(() =>
-  import('./components/SearchResults.vue')
+  import('./components/SearchResults.vue')    // 搜索结果展示组件
 );
 const FreshmenZone = defineAsyncComponent(() =>
-  import('./components/FreshmenZone.vue')
+  import('./components/FreshmenZone.vue')     // 新生专区组件
 );
 const AIRAG = defineAsyncComponent(() =>
-  import('./components/AIRAG.vue')
+  import('./components/AIRAG.vue')            // AI 辅助推荐组件
 );
 const CoursePromotion = defineAsyncComponent(() =>
-  import('./components/CoursePromotion.vue')
+  import('./components/CoursePromotion.vue')  // 课程推广组件
 );
 const PromotedCourses = defineAsyncComponent(() =>
-  import('./components/PromotedCourses.vue')
+  import('./components/PromotedCourses.vue')  // 已推广课程列表组件
 );
 
 export default {
@@ -237,17 +246,27 @@ export default {
       ]
     };
   },
+  /**
+   * 组件创建时的钩子函数
+   * 1. 检查用户权限状态（是否已提交评价或完成问卷）
+   * 2. 获取统计数据
+   * 3. 生成并保存设备指纹
+   */
   created() {
-    // 检测 cookie 状态（此时应该为 false）
+    // 从 Cookie 中读取权限状态
     this.courseEvaluationFilled = Cookies.get('courseEvaluationFilled') === 'true';
     this.surveyCompleted = Cookies.get('surveyCompleted') === 'true';
+    
+    // 如果已获得权限，直接显示搜索页面
     if (this.courseEvaluationFilled || this.surveyCompleted) {
       this.currentPage = 'search';
     }
     
-    // 从后端API获取统计数据
+    // 从后端 API 获取统计数据
     this.fetchStatistics();
-    // 获取设备指纹并存入localStorage
+    
+    // 获取设备指纹并存入 localStorage
+    // 用于防止恶意刷评价和限制 AI 推荐使用次数
     FingerprintJS.load().then(fp => {
       fp.get().then(result => {
         const fingerprint = result.visitorId;
@@ -271,11 +290,21 @@ export default {
   });
   },
   methods: {
+    /**
+     * 课程评价提交成功的回调函数
+     * 设置权限标志并跳转到搜索页面
+     */
     courseAdded() {
       this.courseEvaluationFilled = true;
+      // 设置 Cookie，有效期 120 天
       Cookies.set('courseEvaluationFilled', 'true', { expires: 120 });
       this.currentPage = 'search';
     },
+    
+    /**
+     * 处理课程搜索请求
+     * @param {Object} searchParams - 搜索参数对象 {course_name, instructor}
+     */
     async handleSearch(searchParams) {
       try {
         const response = await axios.get(apiUrl, { params: searchParams });
@@ -313,14 +342,18 @@ export default {
         }
       }
     },
+    /**
+     * 从后端获取统计数据
+     * 包括最近添加的评价数和课程评价总数
+     */
     async fetchStatistics() {
       try {
         console.log('正在获取统计数据...');
         const response = await axios.get(statisticUrl);
         console.log('统计数据响应:', response);
         const data = response.data;
-        this.visitCount = data.visitCount;
-        this.evaluationCount = data.evaluationCount;
+        this.visitCount = data.visitCount;           // 最近添加的评价数
+        this.evaluationCount = data.evaluationCount; // 课程评价总数
         console.log('统计数据获取成功:', this.visitCount, this.evaluationCount);
       } catch (error) {
         console.error('统计数据获取失败:', error);
@@ -340,8 +373,14 @@ export default {
         this.evaluationCount = 0;
       }
     },
+    
+    /**
+     * 新生问卷完成的回调函数
+     * 设置权限标志并跳转到搜索页面
+     */
     handleSurveyCompleted() {
       this.surveyCompleted = true;
+      // 设置 Cookie，有效期 90 天
       Cookies.set('surveyCompleted', 'true', { expires: 90 });
       this.currentPage = 'search';
     }

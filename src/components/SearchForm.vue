@@ -16,16 +16,31 @@
 </template>
 
 <script>
+/**
+ * SearchForm.vue - 课程搜索表单组件
+ * 
+ * 功能：
+ * 1. 提供课程名称和授课教师两个搜索条件
+ * 2. 将搜索参数通过 emit 传递给父组件
+ */
+
 export default {
   data() {
     return {
-      course_name: '',
-      instructor: ''
+      course_name: '',  // 课程名称搜索条件
+      instructor: ''    // 授课教师搜索条件
     };
   },
   methods: {
+    /**
+     * 执行搜索操作
+     * 通过 emit 事件将搜索参数传递给父组件
+     */
     searchCourses() {
-      this.$emit('search', { course_name: this.course_name, instructor: this.instructor });
+      this.$emit('search', { 
+        course_name: this.course_name, 
+        instructor: this.instructor 
+      });
     }
   }
 };

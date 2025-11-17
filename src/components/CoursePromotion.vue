@@ -110,6 +110,16 @@
 </template>
 
 <script>
+/**
+ * CoursePromotion.vue - 课程推广组件
+ * 
+ * 功能：
+ * 1. 收集课程的详细推广信息
+ * 2. 包括课程基本信息、内容介绍、考核方式等
+ * 3. 突出课程亮点和适合的学生群体
+ * 4. 提交到后端供学生查询
+ */
+
 import { Reading, User, UploadFilled } from '@element-plus/icons-vue';
 import axios from 'axios';
 
@@ -122,21 +132,25 @@ export default {
   },
   data() {
     return {
-      course_name: '',
-      course_attribute: '',
-      elective_field: '',
-      instructor: '',
-      credit: 2,
-      content: '',
-      attendance: '',
-      assessment: '',
-      highlights: '',
-      suitable_students: '',
-      resources: [],
-      loading: false
+      course_name: '',          // 课程名称
+      course_attribute: '',     // 课程属性
+      elective_field: '',       // 公选课领域
+      instructor: '',           // 授课教师
+      credit: 2,                // 学分
+      content: '',              // 课程内容介绍
+      attendance: '',           // 考勤与作业要求
+      assessment: '',           // 期末考核方式
+      highlights: '',           // 课程亮点
+      suitable_students: '',    // 适合的学生群体
+      resources: [],            // 教学资源
+      loading: false            // 提交加载状态
     };
   },
   methods: {
+    /**
+     * 提交课程推广信息
+     * 验证表单后发送到后端
+     */
     async promoteCourse() {
       // 表单验证
       if (!this.validateForm()) {
@@ -187,6 +201,10 @@ export default {
         this.loading = false;
       }
     },
+    /**
+     * 验证表单数据
+     * @returns {boolean} 表单是否有效
+     */
     validateForm() {
       if (!this.course_name || !this.course_attribute || !this.instructor || !this.content || 
           !this.attendance || !this.assessment || !this.highlights || !this.suitable_students) {
@@ -199,6 +217,7 @@ export default {
         return false;
       }
       
+      // 如果是公选课，必须选择领域
       if (this.course_attribute === '通识选修课（公选课）' && !this.elective_field) {
         this.$notify({
           title: '警告',
@@ -211,6 +230,11 @@ export default {
       
       return true;
     },
+    
+    /**
+     * 重置表单
+     * 提交成功后清空所有字段
+     */
     resetForm() {
       this.course_name = '';
       this.course_attribute = '';

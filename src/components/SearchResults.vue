@@ -85,49 +85,84 @@
 
 
 <script>
+/**
+ * SearchResults.vue - 搜索结果展示组件
+ * 
+ * 功能：
+ * 1. 展示课程搜索结果
+ * 2. 支持分页显示
+ * 3. 响应式布局（桌面端表格，移动端卡片）
+ * 4. 支持页面跳转
+ */
+
 export default {
-  props: ['results'],
+  props: ['results'],  // 接收父组件传递的搜索结果数组
   data() {
     return {
-      currentPage: 1,
-      itemsPerPage: 15,
-      inputPage: '',
-      isMobile: window.innerWidth <= 768
+      currentPage: 1,        // 当前页码
+      itemsPerPage: 15,      // 每页显示条数
+      inputPage: '',         // 用户输入的跳转页码
+      isMobile: window.innerWidth <= 768  // 是否为移动端
     };
   },
   computed: {
+    /**
+     * 计算总页数
+     */
     totalPages() {
       return Math.ceil(this.results.length / this.itemsPerPage);
     },
+    
+    /**
+     * 计算当前页要显示的结果
+     */
     paginatedResults() {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       return this.results.slice(start, start + this.itemsPerPage);
     }
   },
   methods: {
+    /**
+     * 下一页
+     */
     nextPage() {
       if (this.currentPage < this.totalPages) {
         this.currentPage++;
       }
     },
+    
+    /**
+     * 上一页
+     */
     prevPage() {
       if (this.currentPage > 1) {
         this.currentPage--;
       }
     },
+    
+    /**
+     * 跳转到指定页码
+     */
     jumpToPage() {
       if (this.inputPage >= 1 && this.inputPage <= this.totalPages) {
         this.currentPage = this.inputPage;
       }
     },
+    
+    /**
+     * 处理窗口大小变化
+     * 用于响应式布局切换
+     */
     handleResize() {
       this.isMobile = window.innerWidth <= 768;
     }
   },
   mounted() {
+    // 监听窗口大小变化
     window.addEventListener('resize', this.handleResize);
   },
   beforeUnmount() {
+    // 组件卸载前移除事件监听
     window.removeEventListener('resize', this.handleResize);
   }
 };

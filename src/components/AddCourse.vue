@@ -68,26 +68,42 @@
 </template>
 
 <script>
+/**
+ * AddCourse.vue - 添加课程评价组件
+ * 
+ * 功能：
+ * 1. 收集用户对课程的详细评价
+ * 2. 验证表单数据的完整性和有效性
+ * 3. 提交评价到后端 API
+ * 4. 成功后授予用户查询权限
+ */
+
 import axios from 'axios';
 import Cookies from 'js-cookie';
-// 添加API URL配置
-const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; // 保持与App.vue中相同的地址
+
+// API 地址配置
+const apiBaseUrl = process.env.VUE_APP_API_BASE_URL;
 axios.defaults.baseURL = apiBaseUrl;
+
 export default {
   data() {
     return {
-      course_name: '',
-      course_attribute: '',
-      elective_field: '',
-      instructor: '',
-      content: '',
-      attendance: '',
-      assessment: '',
-      grade: '',
+      course_name: '',        // 课程名称
+      course_attribute: '',   // 课程属性（公共课、专业课等）
+      elective_field: '',     // 公选课领域（仅公选课需要）
+      instructor: '',         // 授课教师
+      content: '',            // 课程内容与评价
+      attendance: '',         // 考勤与平时作业
+      assessment: '',         // 期末考核方式
+      grade: '',              // 课程成绩（可选）
       courseEvaluationFilled: Cookies.get('courseEvaluationFilled') === 'true'
     };
   },
   methods: {
+    /**
+     * 提交课程评价
+     * 验证数据后发送到后端，成功后设置权限 Cookie
+     */
     async addCourse() {
       const courseData = {
         course_name: this.course_name,
@@ -136,26 +152,43 @@ export default {
         alert('课程评价提交失败: ' + (error.response?.data?.message || error.message || '未知错误'));
       }
     },
+    /**
+     * 获取下一个周四的日期
+     * 用于设置 AI 使用次数的重置时间
+     * @returns {Date} 下一个周四的日期对象
+     */
     getNextThursdayDate(){
         const now = new Date()
-        const dayOfWeek = now.getDay() // 0=Sunday, ..., 6=Saturday
-        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 下一个周四
+        const dayOfWeek = now.getDay() // 0=星期日, ..., 6=星期六
+        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 计算距离下个周四的天数
         const nextThursday = new Date(now)
         nextThursday.setDate(now.getDate() + daysUntilThursday)
-        nextThursday.setHours(0, 0, 0, 0)
+        nextThursday.setHours(0, 0, 0, 0) // 设置为当天 00:00:00
         return nextThursday
     },
+    
+    /**
+     * 设置 Cookie
+     * @param {string} name - Cookie 名称
+     * @param {string} value - Cookie 值
+     * @param {Date} expires - 过期时间
+     */
     setCookie(name, value, expires) {
         document.cookie = `${name}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Strict`
     },
-  async  onQuestionnaireCompleted() {
-        // 从LocalStorage获取指纹
+    
+    /**
+     * 评价提交完成后的回调
+     * 设置设备指纹和 AI 使用次数的 Cookie
+     */
+    async onQuestionnaireCompleted() {
+        // 从 LocalStorage 获取设备指纹
         let fingerprint = localStorage.getItem('fingerprint');
         const expires = this.getNextThursdayDate()
 
-        // 设置指纹和使用次数 cookie
+        // 设置指纹和 AI 使用次数 cookie，下周四过期
         this.setCookie('fingerprint', fingerprint, expires)
-        this.setCookie('ai_uses_left', '10', expires)
+        this.setCookie('ai_uses_left', '10', expires)  // 每周 10 次 AI 推荐机会
   }
   }
 };

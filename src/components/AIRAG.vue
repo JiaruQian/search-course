@@ -100,12 +100,25 @@
 </template>
 
 <script>
+/**
+ * AIRAG.vue - AI 辅助推荐组件
+ * 
+ * 功能：
+ * 1. 收集用户的课程需求（课程类别、个性化需求）
+ * 2. 调用后端 RAG（检索增强生成）API 获取推荐
+ * 3. 展示 AI 推荐的课程及推荐理由
+ * 4. 显示 LLM 思考过程和调试信息
+ * 5. 使用设备指纹限制使用次数
+ */
 
 import MarkdownIt from 'markdown-it';
 import { ArrowRight, Back } from '@element-plus/icons-vue'
 import axios from 'axios'
+
+// API 地址配置
 const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; 
 axios.defaults.baseURL = apiBaseUrl;
+
 export default {
   name: 'AIRAG',
   components: {
@@ -114,11 +127,12 @@ export default {
   },
   data() {
     return {
-      activeStep: 0,
+      activeStep: 0,  // 当前步骤（0: 填写信息，1: 查看推荐）
       formData: {
-        category: '',
-        userQuestion: 0,
+        category: '',      // 课程类别（1-5 或 0 表示任意）
+        userQuestion: 0,   // 用户需求描述
       },
+      // 表单验证规则
       rules: {
         category: [
           { required: false, message: '请选择课程类别', trigger: 'change'}
@@ -128,20 +142,28 @@ export default {
           { min: 0, max: 50, message: '描述长度在0到50个字符之间', trigger: 'blur' }
         ]
       },
-      loading: false,
-      recommendations: [],
-      llm_output: "",
-      llm_response_text: "",
-      rag_results: [],
-      md: new MarkdownIt(),
+      loading: false,          // 加载状态
+      recommendations: [],      // AI 推荐结果
+      llm_output: "",          // LLM 原始输出
+      llm_response_text: "",   // LLM 响应文本
+      rag_results: [],         // RAG 检索结果
+      md: new MarkdownIt(),    // Markdown 解析器
     };
   },
   computed: {
+    /**
+     * 将 LLM 响应文本转换为 HTML
+     * 使用 Markdown-it 解析 Markdown 格式
+     */
     llm_response_html() {
       return this.md.render(this.llm_response_text || '');
     }
   },
   methods: {
+    /**
+     * 提交表单获取 AI 推荐
+     * 验证表单后调用后端 RAG API
+     */
     async submitForm() {
       try {
         await this.$refs.formRef.validate();
@@ -206,36 +228,62 @@ export default {
         this.loading = false;
       }
     },
+    /**
+     * 返回表单页面
+     */
     backToForm() {
       this.activeStep = 0;
     },
+    
+    /**
+     * 根据推荐排名获取标签类型
+     * @param {number} index - 推荐的索引
+     * @returns {string} Element Plus 的标签类型
+     */
     getTagType(index) {
       const types = ['success', 'warning', 'info'];
       return types[index] || 'info';
     },
+    
+    /**
+     * 获取指定名称的 Cookie
+     * @param {string} name - Cookie 名称
+     * @returns {string|null} Cookie 值或 null
+     */
     getCookie(name) {
       const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
       return match ? decodeURIComponent(match[2]) : null
     },
+    /**
+     * 减少 AI 使用次数
+     * 检查剩余次数，如果有剩余则减 1
+     * @returns {boolean} 是否成功减少次数
+     */
     decrementAIUsage() {
-    const uses = parseInt(this.getCookie('ai_uses_left') || '0', 10)
-    if (uses <= 0) {
-      alert('本周使用次数已用完，请下周四后再试')
-      return false
-    }
+      const uses = parseInt(this.getCookie('ai_uses_left') || '0', 10)
+      if (uses <= 0) {
+        alert('本周使用次数已用完，请下周四后再试')
+        return false
+      }
 
-    const newUses = uses - 1
-    const expires = this.getNextThursdayDate()
-    this.setCookie('ai_uses_left', newUses.toString(), expires)
-    return true
-  },
-  getNextThursdayDate(){
+      const newUses = uses - 1
+      const expires = this.getNextThursdayDate()
+      this.setCookie('ai_uses_left', newUses.toString(), expires)
+      return true
+    },
+    
+    /**
+     * 获取下一个周四的日期
+     * AI 使用次数每周四重置
+     * @returns {Date} 下一个周四的日期对象
+     */
+    getNextThursdayDate(){
         const now = new Date()
-        const dayOfWeek = now.getDay() // 0=Sunday, ..., 6=Saturday
-        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 下一个周四
+        const dayOfWeek = now.getDay() // 0=星期日, ..., 6=星期六
+        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 计算距离下个周四的天数
         const nextThursday = new Date(now)
         nextThursday.setDate(now.getDate() + daysUntilThursday)
-        nextThursday.setHours(0, 0, 0, 0)
+        nextThursday.setHours(0, 0, 0, 0) // 设置为当天 00:00:00
         return nextThursday
     }
   }

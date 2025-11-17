@@ -88,25 +88,42 @@
 </template>
 
 <script>
+/**
+ * PromotedCourses.vue - 已推广课程展示组件
+ * 
+ * 功能：
+ * 1. 展示所有已推广的课程信息
+ * 2. 支持按课程名称和教师搜索
+ * 3. 折叠展示详细信息
+ * 4. 提供备用数据作为 fallback
+ */
+
 import axios from 'axios';
 
 export default {
   name: 'PromotedCourses',
   data() {
     return {
-      courses: [],
-      courseName: '',
-      instructor: '',
-      loading: false
+      courses: [],      // 课程列表
+      courseName: '',   // 搜索条件：课程名称
+      instructor: '',   // 搜索条件：教师姓名
+      loading: false    // 加载状态
     };
   },
   computed: {
+    /**
+     * 过滤后的课程列表
+     * 由于搜索由后端处理，这里直接返回课程列表
+     */
     filteredCourses() {
-      // 由于搜索现在通过API处理，直接返回课程列表
       return this.courses;
     }
   },
   methods: {
+    /**
+     * 从后端获取课程列表
+     * @param {Object} params - 搜索参数（可选）
+     */
     async fetchCourses(params = {}) {
       this.loading = true;
       try {
@@ -199,6 +216,10 @@ export default {
         this.loading = false;
       }
     },
+    /**
+     * 执行搜索
+     * 根据输入的课程名和教师名重新获取课程列表
+     */
     handleSearch() {
       // 使用搜索参数重新获取课程列表
       const searchParams = {};
@@ -211,11 +232,22 @@ export default {
       
       this.fetchCourses(searchParams);
     },
+    
+    /**
+     * 清除搜索条件
+     * 显示所有课程
+     */
     handleClearSearch() {
       this.courseName = '';
       this.instructor = '';
       this.fetchCourses();
     },
+    
+    /**
+     * 根据课程类型获取标签颜色
+     * @param {string} type - 课程类型
+     * @returns {string} Element Plus 标签类型
+     */
     getCourseTypeTag(type) {
       const typeMap = {
         '体育课': 'success',
@@ -227,6 +259,10 @@ export default {
       return typeMap[type] || 'info';
     }
   },
+  
+  /**
+   * 组件挂载时获取课程列表
+   */
   mounted() {
     this.fetchCourses();
   }
