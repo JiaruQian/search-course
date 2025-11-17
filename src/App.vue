@@ -1,9 +1,18 @@
 <template>
+  <!--
+    根应用结构说明：
+    1. header 区用于展示站点标题与统计卡片
+    2. main 区域负责承载所有核心交互组件
+    3. footer 给出站点声明与版权信息
+    通过 Element Plus 的栅格系统实现响应式布局
+  -->
+    
   <div id="app">
     <header id="header">
+      <!-- 顶部 banner，配合 mounted 钩子动态赋背景图 -->
       <div class="header-content">
         <h1>WHU课程收集与评价查询系统</h1>
-        <!-- 添加 Statistic 组件展示统计数据 -->
+        <!-- 添加 Statistic 组件展示统计数据，帮助用户快速了解库最新动态 -->
         <div class="statistics-container">
           <el-row :gutter="20" type="flex" justify="center">
             <el-col :xs="24" :sm="12" :md="6">
@@ -29,6 +38,7 @@
       </div>
     </header>
     <main>
+      <!-- 主体区域：通过 currentPage 切换不同功能模块 -->
       <el-row type="flex" justify="center">
         <el-col :xs="24" :sm="22" :md="20" :lg="18" :xl="16">
           <div class="button-container">
@@ -67,6 +77,7 @@
             <!-- 学生功能按钮 - 需要cookie -->
             <template v-if="courseEvaluationFilled || surveyCompleted">
               <div class="student-buttons">
+                <!-- 下面的按钮组面向已解锁权限的用户，提供完整体验 -->
                 <el-button 
                 type="primary" 
                 size="large" 
@@ -107,13 +118,8 @@
             </template>
           </div>
 
-          <UsageGuide
-            :course-evaluation-filled="courseEvaluationFilled"
-            :survey-completed="surveyCompleted"
-            @navigate="currentPage = $event"
-          />
-
           <div class="content-container">
+            <!-- 通过 v-if 的一系列延迟加载组件保持首屏整洁 -->
             <AddCourse v-if="currentPage === 'add'" @courseAdded="courseAdded"></AddCourse>
             <FreshmenZone v-if="currentPage === 'freshmen'" @surveyCompleted="handleSurveyCompleted"></FreshmenZone>
             <AIRAG v-if="currentPage === 'airag'"></AIRAG>
@@ -133,6 +139,7 @@
       </el-row>
     </main>
     <footer>
+      <!-- 底部区域统一放置免责声明和版权，保持视觉上呼应 header -->
       <div class="footer-content">
         <p class="disclaimer">声明：本网站数据来源于大众同学对各类课程的评价，不保证真实性、可靠性、准确性，并不承担由此产生的任何责任。</p>
         <p class="copyright">&copy; CopyRight by JeredGong. All rights reserved.</p>
@@ -142,32 +149,38 @@
 </template>
 
 <script>
+/**
+ * App.vue - 应用根组件
+ * 
+ * 主要功能：
+ * 1. 管理页面导航和路由状态
+ * 2. 处理用户权限验证（Cookie 和设备指纹）
+ * 3. 统一管理 API 请求
+ * 4. 展示统计数据
+ * 5. 协调各子组件之间的通信
+ */
+
 import { defineAsyncComponent } from 'vue';
-import FingerprintJS from '@fingerprintjs/fingerprintjs';
+import axios from 'axios';
+import Cookies from 'js-cookie';
 import SearchForm from './components/SearchForm.vue';
-import UsageGuide from './components/UsageGuide.vue';
-import {
-  Calendar,
-  Document,
-  Plus,
-  User,
-  Search,
-  Edit,
-  Connection,
-  Promotion,
-  List
-} from '@element-plus/icons-vue';
-import {
-  fetchStatistics as fetchStatisticsApi,
-  searchCourses
-} from '@/services/api';
-import {
-  hasCompletedCourseEvaluation,
-  hasCompletedSurvey,
-  markCourseEvaluationCompleted,
-  markSurveyCompleted,
-  persistFingerprint
-} from '@/utils/permissions';
+import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion, List } from '@element-plus/icons-vue';
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
+
+// API 地址配置
+const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; // 从环境变量读取 API 基础地址
+const apiUrl = `/search`;          // 课程搜索接口
+const statisticUrl = `/statistic`; // 统计数据接口
+
+/**
+ * axios 请求相关默认值说明：
+ * - baseURL 使用环境变量，方便区分开发与生产
+ * - Content-Type 固定为 JSON，以配合后端 API 约定
+ */
+// 配置 axios 默认设置
+axios.defaults.baseURL = apiBaseUrl;
+// 注意：CORS 头部应由服务器端设置，客户端无需设置
+axios.defaults.headers.post['Content-Type'] = 'application/json';
 
 // 使用异步组件加载，提升首屏加载性能
 const AddCourse = defineAsyncComponent(() =>
@@ -190,6 +203,10 @@ const PromotedCourses = defineAsyncComponent(() =>
 );
 
 export default {
+  /**
+   * 组件注册区：将所有异步组件和图标引入当前作用域
+   * 图标通过 Element Plus 提供，避免重复引包
+   */
   components: {
     AddCourse,
     SearchForm,
@@ -198,7 +215,6 @@ export default {
     AIRAG,
     CoursePromotion,
     PromotedCourses,
-    UsageGuide,
     Calendar,
     Document,
     Plus,
@@ -210,6 +226,14 @@ export default {
     List
   },
   data() {
+    /**
+     * data 函数内返回的响应式状态：
+     * - results：搜索结果集合
+     * - currentPage：控制当前展示的功能页
+     * - surveyCompleted / courseEvaluationFilled：权限标识
+     * - visitCount / evaluationCount：统计展示用数字
+     * - mockResults：当 API 异常时使用的静态示例，提升容错
+     */
     return {
       results: [],
       currentPage: 'add', // 默认显示添加课程评价界面
@@ -260,9 +284,9 @@ export default {
    */
   created() {
     // 从 Cookie 中读取权限状态
-    this.courseEvaluationFilled = hasCompletedCourseEvaluation();
-    this.surveyCompleted = hasCompletedSurvey();
-    
+    this.courseEvaluationFilled = Cookies.get('courseEvaluationFilled') === 'true';
+    this.surveyCompleted = Cookies.get('surveyCompleted') === 'true';
+   
     // 如果已获得权限，直接显示搜索页面
     if (this.courseEvaluationFilled || this.surveyCompleted) {
       this.currentPage = 'search';
@@ -275,7 +299,8 @@ export default {
     // 用于防止恶意刷评价和限制 AI 推荐使用次数
     FingerprintJS.load().then(fp => {
       fp.get().then(result => {
-        persistFingerprint(result.visitorId);
+        const fingerprint = result.visitorId;
+        localStorage.setItem('deviceFingerprint', fingerprint);
       }).catch(error => {
         console.error('获取设备指纹失败:', error);
       });
@@ -285,14 +310,15 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-    const header = document.getElementById('header');
-    if (header) {
-      header.style.background = `url(${require('@/assets/R.jpg')}) no-repeat center center`;
-      header.style.backgroundSize = "cover";
-    } else {
-      console.error('Element with ID "header" not found');
-    }
-  });
+      // 这里通过动态设置背景，保证构建后文件路径由 webpack 处理
+      const header = document.getElementById('header');
+      if (header) {
+        header.style.background = `url(${require('@/assets/R.jpg')}) no-repeat center center`;
+        header.style.backgroundSize = "cover";
+      } else {
+        console.error('Element with ID "header" not found');
+      }
+    });
   },
   methods: {
     /**
@@ -301,23 +327,29 @@ export default {
      */
     courseAdded() {
       this.courseEvaluationFilled = true;
-      markCourseEvaluationCompleted();
+      // 设置 Cookie，有效期 120 天
+      Cookies.set('courseEvaluationFilled', 'true', { expires: 120 });
       this.currentPage = 'search';
     },
     
     /**
      * 处理课程搜索请求
      * @param {Object} searchParams - 搜索参数对象 {course_name, instructor}
+     * 请求流程：
+     * 1. 发送 GET 请求至搜索接口
+     * 2. 解析返回数据并赋值给 results
+     * 3. 捕获异常时尝试使用 mock 数据作为后备，保证界面友好
      */
     async handleSearch(searchParams) {
       try {
-        const data = await searchCourses(searchParams);
-        if (Array.isArray(data)) {
-          this.results = data;
-          return;
+        const response = await axios.get(apiUrl, { params: searchParams });
+        
+        if (response.data && Array.isArray(response.data)) {
+          this.results = response.data;
+        } else {
+          console.warn('搜索响应不是数组格式:', response.data);
+          this.results = [];
         }
-        console.warn('搜索响应不是数组格式:', data);
-        this.results = [];
       } catch (error) {
         console.error('搜索课程时出错:', error);
         if (error.response) {
@@ -348,14 +380,16 @@ export default {
     /**
      * 从后端获取统计数据
      * 包括最近添加的评价数和课程评价总数
+     * 该数据在 header 中直观展示，可作为平台活跃度指标
      */
     async fetchStatistics() {
       try {
         console.log('正在获取统计数据...');
-        const data = await fetchStatisticsApi();
-        console.log('统计数据响应:', data);
-        this.visitCount = data.visitCount || 0;           // 最近添加的评价数
-        this.evaluationCount = data.evaluationCount || 0; // 课程评价总数
+        const response = await axios.get(statisticUrl);
+        console.log('统计数据响应:', response);
+        const data = response.data;
+        this.visitCount = data.visitCount;           // 最近添加的评价数
+        this.evaluationCount = data.evaluationCount; // 课程评价总数
         console.log('统计数据获取成功:', this.visitCount, this.evaluationCount);
       } catch (error) {
         console.error('统计数据获取失败:', error);
@@ -382,7 +416,8 @@ export default {
      */
     handleSurveyCompleted() {
       this.surveyCompleted = true;
-      markSurveyCompleted();
+      // 设置 Cookie，有效期 90 天
+      Cookies.set('surveyCompleted', 'true', { expires: 90 });
       this.currentPage = 'search';
     }
   }
@@ -390,6 +425,7 @@ export default {
 </script>
 
 <style>
+/* ========= 全局基础样式 ========= */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -397,12 +433,14 @@ body {
   background-color: #f5f7fa;
 }
 
+/* ========= 页面的整体容器，使用 flex 形成上下结构 ========= */
 #app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+/* ========= 顶部 Hero Banner ========= */
 header {
   background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
   color: white;
@@ -427,6 +465,7 @@ header h1 {
   margin-top: 30px;
 }
 
+/* 卡片采用玻璃拟态风格 */
 .statistic-card {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -457,6 +496,7 @@ main {
   padding: 40px 20px;
 }
 
+/* 主按钮区域设置弹性布局，提高清晰度 */
 .button-container {
   display: flex;
   flex-wrap: wrap;
@@ -465,6 +505,7 @@ main {
   margin-bottom: 30px;
 }
 
+/* 统一按钮尺寸，结合 Element Plus 提供的配色 */
 .action-button {
   min-width: 180px;
   height: 50px;
@@ -517,6 +558,7 @@ footer {
   flex-wrap: wrap;
   justify-content: center;
 }
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   header {
