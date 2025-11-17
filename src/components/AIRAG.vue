@@ -12,6 +12,15 @@
       <el-col :xs="24" :sm="22" :md="20" :lg="18" :xl="16">
         <!-- 第一步：填写信息 -->
         <div v-if="activeStep === 0" class="form-container">
+          <el-alert
+            class="quota-alert"
+            type="info"
+            show-icon
+            :closable="false"
+            title="AI 推荐使用次数"
+          >
+            本周剩余 <strong>{{ remainingAIQuota }}</strong> 次 AI 推荐机会
+          </el-alert>
           <el-form :model="formData" :rules="rules" ref="formRef" label-position="top">
             <el-row :gutter="20">
               <el-col :xs="24" :sm="12">
@@ -100,24 +109,14 @@
 </template>
 
 <script>
-/**
- * AIRAG.vue - AI 辅助推荐组件
- * 
- * 功能：
- * 1. 收集用户的课程需求（课程类别、个性化需求）
- * 2. 调用后端 RAG（检索增强生成）API 获取推荐
- * 3. 展示 AI 推荐的课程及推荐理由
- * 4. 显示 LLM 思考过程和调试信息
- * 5. 使用设备指纹限制使用次数
- */
-
 import MarkdownIt from 'markdown-it';
-import { ArrowRight, Back } from '@element-plus/icons-vue'
-import axios from 'axios'
-
-// API 地址配置
-const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; 
-axios.defaults.baseURL = apiBaseUrl;
+import { ArrowRight, Back } from '@element-plus/icons-vue';
+import { requestAIRAGRecommendation } from '@/services/api';
+import {
+  DEVICE_FINGERPRINT_KEY,
+  decrementAIQuota,
+  getAIQuota
+} from '@/utils/permissions';
 
 export default {
   name: 'AIRAG',
@@ -130,7 +129,7 @@ export default {
       activeStep: 0,  // 当前步骤（0: 填写信息，1: 查看推荐）
       formData: {
         category: '',      // 课程类别（1-5 或 0 表示任意）
-        userQuestion: 0,   // 用户需求描述
+        userQuestion: ''   // 用户需求描述
       },
       // 表单验证规则
       rules: {
@@ -148,6 +147,7 @@ export default {
       llm_response_text: "",   // LLM 响应文本
       rag_results: [],         // RAG 检索结果
       md: new MarkdownIt(),    // Markdown 解析器
+      remainingAIQuota: getAIQuota() || 0
     };
   },
   computed: {
@@ -167,6 +167,11 @@ export default {
     async submitForm() {
       try {
         await this.$refs.formRef.validate();
+
+        if (this.remainingAIQuota <= 0) {
+          this.$message.warning('本周使用次数已用完，请下周四后再试');
+          return;
+        }
         this.loading = true;
 
         try {
@@ -176,21 +181,17 @@ export default {
             catagory: this.formData.category  // 注意：后端期望的字段名是 catagory
           };
 
-          // 调用8088端口的AI推荐API（独立于其他8082端口的功能）
-          // 从localStorage获取设备指纹
-          let deviceFingerprint = localStorage.getItem('deviceFingerprint');
+          // 调用 RAG API
+          const deviceFingerprint = localStorage.getItem(DEVICE_FINGERPRINT_KEY);
           if (!deviceFingerprint) {
-            // 如果没有设备指纹，报错
             throw new Error('你的设备风险高，无法使用AI推荐功能');
           }
-          const response = await axios.post('/rag', requestData, {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Device-Fingerprint': deviceFingerprint
-            },
-            timeout: 120000  // 120秒超时，因为AI处理可能需要更长时间
-          });
-          this.recommendations = response.data.data.recommendations;
+          const response = await requestAIRAGRecommendation(requestData, deviceFingerprint);
+          const payload = response?.data || response || {};
+          this.recommendations = payload.recommendations || [];
+          this.llm_output = payload.llm_output || '';
+          this.llm_response_text = payload.llm_response_text || '';
+          this.rag_results = payload.rag_results || [];
         } catch (error) {
           console.error('获取AI推荐失败:', error);
           if (error.response) {
@@ -219,7 +220,9 @@ export default {
           ];
         }
         console.log('AI推荐结果:', this.recommendations);
-        // 进入下一步
+        // 进入下一步并扣减次数
+        decrementAIQuota();
+        this.remainingAIQuota = getAIQuota();
         this.activeStep = 1;
 
       } catch (error) {
@@ -243,48 +246,6 @@ export default {
     getTagType(index) {
       const types = ['success', 'warning', 'info'];
       return types[index] || 'info';
-    },
-    
-    /**
-     * 获取指定名称的 Cookie
-     * @param {string} name - Cookie 名称
-     * @returns {string|null} Cookie 值或 null
-     */
-    getCookie(name) {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
-      return match ? decodeURIComponent(match[2]) : null
-    },
-    /**
-     * 减少 AI 使用次数
-     * 检查剩余次数，如果有剩余则减 1
-     * @returns {boolean} 是否成功减少次数
-     */
-    decrementAIUsage() {
-      const uses = parseInt(this.getCookie('ai_uses_left') || '0', 10)
-      if (uses <= 0) {
-        alert('本周使用次数已用完，请下周四后再试')
-        return false
-      }
-
-      const newUses = uses - 1
-      const expires = this.getNextThursdayDate()
-      this.setCookie('ai_uses_left', newUses.toString(), expires)
-      return true
-    },
-    
-    /**
-     * 获取下一个周四的日期
-     * AI 使用次数每周四重置
-     * @returns {Date} 下一个周四的日期对象
-     */
-    getNextThursdayDate(){
-        const now = new Date()
-        const dayOfWeek = now.getDay() // 0=星期日, ..., 6=星期六
-        const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7 // 计算距离下个周四的天数
-        const nextThursday = new Date(now)
-        nextThursday.setDate(now.getDate() + daysUntilThursday)
-        nextThursday.setHours(0, 0, 0, 0) // 设置为当天 00:00:00
-        return nextThursday
     }
   }
 };
@@ -307,6 +268,9 @@ export default {
   border-radius: 8px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   margin-bottom: 30px;
+}
+.quota-alert {
+  margin-bottom: 20px;
 }
 
 .submit-btn {

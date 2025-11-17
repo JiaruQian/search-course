@@ -121,7 +121,7 @@
  */
 
 import { Reading, User, UploadFilled } from '@element-plus/icons-vue';
-import axios from 'axios';
+import { submitCoursePromotion } from '@/services/api';
 
 export default {
   name: 'CoursePromotion',
@@ -176,19 +176,14 @@ export default {
         };
 
         // 调用API提交课程推广信息
-        const response = await axios.post('/course_promotion', courseData);
-        
-        if (response.status === 200) {
-          this.$notify({
-            title: '成功',
-            message: '课程推广信息已成功提交',
-            type: 'success',
-            duration: 3000
-          });
-          this.resetForm();
-        } else {
-          throw new Error('提交失败');
-        }
+        await submitCoursePromotion(courseData);
+        this.$notify({
+          title: '成功',
+          message: '课程推广信息已成功提交',
+          type: 'success',
+          duration: 3000
+        });
+        this.resetForm();
       } catch (error) {
         console.error('提交课程推广信息时出错:', error);
         this.$notify({

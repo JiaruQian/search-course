@@ -114,18 +114,8 @@
 </template>
 
 <script>
-/**
- * FreshmenZone.vue - 新生专区组件
- * 
- * 功能：
- * 1. 为新生提供网站功能介绍
- * 2. 收集新生对选课系统的看法和期待
- * 3. 完成问卷后授予查询权限
- * 4. 提供选课相关的参考资料链接
- */
-
-import axios from 'axios';
-import Cookies from 'js-cookie';
+import { submitSurvey as submitSurveyApi } from '@/services/api';
+import { markSurveyCompleted } from '@/utils/permissions';
 
 export default {
   name: 'FreshmenZone',
@@ -184,16 +174,10 @@ export default {
             };
 
             // 提交数据到后端API
-            const response = await axios.post('/submit_survey', surveyPayload);
-            
-            if (response.status === 200) {
-              // 设置cookie表示问卷已完成
-              Cookies.set('surveyCompleted', 'true', { expires: 200 });
-              this.$message.success('问卷提交成功！');
-              this.nextStep();
-            } else {
-              throw new Error('提交失败');
-            }
+            await submitSurveyApi(surveyPayload);
+            markSurveyCompleted();
+            this.$message.success('问卷提交成功！');
+            this.nextStep();
           } catch (error) {
             console.error('提交问卷时出错:', error);
             this.$notify({

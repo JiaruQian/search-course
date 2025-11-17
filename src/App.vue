@@ -107,6 +107,12 @@
             </template>
           </div>
 
+          <UsageGuide
+            :course-evaluation-filled="courseEvaluationFilled"
+            :survey-completed="surveyCompleted"
+            @navigate="currentPage = $event"
+          />
+
           <div class="content-container">
             <AddCourse v-if="currentPage === 'add'" @courseAdded="courseAdded"></AddCourse>
             <FreshmenZone v-if="currentPage === 'freshmen'" @surveyCompleted="handleSurveyCompleted"></FreshmenZone>
@@ -136,33 +142,32 @@
 </template>
 
 <script>
-/**
- * App.vue - 应用根组件
- * 
- * 主要功能：
- * 1. 管理页面导航和路由状态
- * 2. 处理用户权限验证（Cookie 和设备指纹）
- * 3. 统一管理 API 请求
- * 4. 展示统计数据
- * 5. 协调各子组件之间的通信
- */
-
 import { defineAsyncComponent } from 'vue';
-import axios from 'axios';
-import Cookies from 'js-cookie';
-import SearchForm from './components/SearchForm.vue';
-import { Calendar, Document, Plus, User, Search, Edit, Connection, Promotion, List } from '@element-plus/icons-vue';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
-
-// API 地址配置
-const apiBaseUrl = process.env.VUE_APP_API_BASE_URL; // 从环境变量读取 API 基础地址
-const apiUrl = `/search`;          // 课程搜索接口
-const statisticUrl = `/statistic`; // 统计数据接口
-
-// 配置 axios 默认设置
-axios.defaults.baseURL = apiBaseUrl;
-// 注意：CORS 头部应由服务器端设置，客户端无需设置
-axios.defaults.headers.post['Content-Type'] = 'application/json';
+import SearchForm from './components/SearchForm.vue';
+import UsageGuide from './components/UsageGuide.vue';
+import {
+  Calendar,
+  Document,
+  Plus,
+  User,
+  Search,
+  Edit,
+  Connection,
+  Promotion,
+  List
+} from '@element-plus/icons-vue';
+import {
+  fetchStatistics as fetchStatisticsApi,
+  searchCourses
+} from '@/services/api';
+import {
+  hasCompletedCourseEvaluation,
+  hasCompletedSurvey,
+  markCourseEvaluationCompleted,
+  markSurveyCompleted,
+  persistFingerprint
+} from '@/utils/permissions';
 
 // 使用异步组件加载，提升首屏加载性能
 const AddCourse = defineAsyncComponent(() =>
@@ -193,6 +198,7 @@ export default {
     AIRAG,
     CoursePromotion,
     PromotedCourses,
+    UsageGuide,
     Calendar,
     Document,
     Plus,
@@ -254,8 +260,8 @@ export default {
    */
   created() {
     // 从 Cookie 中读取权限状态
-    this.courseEvaluationFilled = Cookies.get('courseEvaluationFilled') === 'true';
-    this.surveyCompleted = Cookies.get('surveyCompleted') === 'true';
+    this.courseEvaluationFilled = hasCompletedCourseEvaluation();
+    this.surveyCompleted = hasCompletedSurvey();
     
     // 如果已获得权限，直接显示搜索页面
     if (this.courseEvaluationFilled || this.surveyCompleted) {
@@ -269,8 +275,7 @@ export default {
     // 用于防止恶意刷评价和限制 AI 推荐使用次数
     FingerprintJS.load().then(fp => {
       fp.get().then(result => {
-        const fingerprint = result.visitorId;
-        localStorage.setItem('deviceFingerprint', fingerprint);
+        persistFingerprint(result.visitorId);
       }).catch(error => {
         console.error('获取设备指纹失败:', error);
       });
@@ -296,8 +301,7 @@ export default {
      */
     courseAdded() {
       this.courseEvaluationFilled = true;
-      // 设置 Cookie，有效期 120 天
-      Cookies.set('courseEvaluationFilled', 'true', { expires: 120 });
+      markCourseEvaluationCompleted();
       this.currentPage = 'search';
     },
     
@@ -307,14 +311,13 @@ export default {
      */
     async handleSearch(searchParams) {
       try {
-        const response = await axios.get(apiUrl, { params: searchParams });
-        
-        if (response.data && Array.isArray(response.data)) {
-          this.results = response.data;
-        } else {
-          console.warn('搜索响应不是数组格式:', response.data);
-          this.results = [];
+        const data = await searchCourses(searchParams);
+        if (Array.isArray(data)) {
+          this.results = data;
+          return;
         }
+        console.warn('搜索响应不是数组格式:', data);
+        this.results = [];
       } catch (error) {
         console.error('搜索课程时出错:', error);
         if (error.response) {
@@ -349,11 +352,10 @@ export default {
     async fetchStatistics() {
       try {
         console.log('正在获取统计数据...');
-        const response = await axios.get(statisticUrl);
-        console.log('统计数据响应:', response);
-        const data = response.data;
-        this.visitCount = data.visitCount;           // 最近添加的评价数
-        this.evaluationCount = data.evaluationCount; // 课程评价总数
+        const data = await fetchStatisticsApi();
+        console.log('统计数据响应:', data);
+        this.visitCount = data.visitCount || 0;           // 最近添加的评价数
+        this.evaluationCount = data.evaluationCount || 0; // 课程评价总数
         console.log('统计数据获取成功:', this.visitCount, this.evaluationCount);
       } catch (error) {
         console.error('统计数据获取失败:', error);
@@ -380,8 +382,7 @@ export default {
      */
     handleSurveyCompleted() {
       this.surveyCompleted = true;
-      // 设置 Cookie，有效期 90 天
-      Cookies.set('surveyCompleted', 'true', { expires: 90 });
+      markSurveyCompleted();
       this.currentPage = 'search';
     }
   }

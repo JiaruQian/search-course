@@ -98,7 +98,7 @@
  * 4. 提供备用数据作为 fallback
  */
 
-import axios from 'axios';
+import { fetchCoursePromotions } from '@/services/api';
 
 export default {
   name: 'PromotedCourses',
@@ -136,20 +136,17 @@ export default {
           queryParams.instructor = params.instructor;
         }
 
-        const response = await axios.get('/course_promotion', {
-          params: queryParams
-        });
-        
-        if (response.status === 200 && response.data.success) {
-          this.courses = response.data.data;
+        const response = await fetchCoursePromotions(queryParams);
+        if (response.success) {
+          this.courses = response.data;
           this.$notify({
             title: '成功',
-            message: response.data.message || '获取课程列表成功',
+            message: response.message || '获取课程列表成功',
             type: 'success',
             duration: 3000
           });
         } else {
-          throw new Error(response.data.message || '获取课程列表失败');
+          throw new Error(response.message || '获取课程列表失败');
         }
       } catch (error) {
         console.error('获取课程列表失败:', error);
